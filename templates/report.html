@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Absent Report</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(to right, #c9ffbf, #ffafbd);
+            padding: 2rem;
+            color: #333;
+            transition: background 0.3s, color 0.3s;
+        }
+
+        h2 {
+            text-align: center;
+        }
+
+        ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        li {
+            padding: 8px;
+            background: #ffffffaa;
+            margin-bottom: 5px;
+            border-radius: 6px;
+        }
+
+        a.button {
+            display: inline-block;
+            padding: 10px 20px;
+            margin-top: 1rem;
+            background: #00b894;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+        }
+
+        a.button:hover {
+            background: #009f82;
+        }
+
+        .center {
+            text-align: center;
+        }
+
+        /* Dark Mode Styles */
+        body.dark-mode {
+            background: linear-gradient(to right, #232526, #414345);
+            color: #f0f0f0;
+        }
+
+        body.dark-mode li {
+            background: #444;
+            color: #eee;
+        }
+
+        body.dark-mode h2 {
+            color: #f0f0f0;
+        }
+
+        body.dark-mode .button {
+            background: #555;
+            color: #fff;
+        }
+
+        body.dark-mode .button:hover {
+            background: #777;
+        }
+
+        /* Toggle Styles */
+        .dark-toggle-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+
+        .dark-toggle-container label {
+            font-weight: bold;
+            color: white;
+            cursor: pointer;
+        }
+
+        .dark-toggle-container input {
+            transform: scale(1.5);
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="dark-toggle-container">
+        <label>
+            <input type="checkbox" id="dark-toggle">
+            🌙 Dark Mode
+        </label>
+    </div>
+
+    <h2>🚫 Absentees on {{ date }}</h2>
+
+    <div class="center" style="margin-bottom: 1.5rem;">
+        <p><strong>📋 Total Students:</strong> {{ total_students }}</p>
+        <p><strong>✅ Present:</strong> {{ total_present }}</p>
+        <p><strong>🚫 Absent:</strong> {{ total_absent }}</p>
+    </div>
+
+    <div class="center">
+        {% if absentees %}
+            <ul>
+                {% for uid, name in absentees %}
+                    <li>{{ name }} ({{ uid }})</li>
+                {% endfor %}
+            </ul>
+            <a href="{{ url_for('send_absent_emails') }}" class="button">Send Absent Emails</a>
+            <a href="{{ url_for('export_absentees') }}" class="button">📤 Export to Excel</a>
+        {% else %}
+            <p>No absentees today! 🎉</p>
+        {% endif %}
+        <br><a href="{{ url_for('index') }}" class="button" style="background:#636e72;margin-top:10px;">⬅ Back to Home</a>
+    </div>
+
+    <script>
+        const darkToggle = document.getElementById('dark-toggle');
+        const prefersDark = localStorage.getItem('dark-mode') === 'true';
+
+        if (prefersDark) {
+            document.body.classList.add('dark-mode');
+            darkToggle.checked = true;
+        }
+
+        darkToggle.addEventListener('change', () => {
+            if (darkToggle.checked) {
+                document.body.classList.add('dark-mode');
+                localStorage.setItem('dark-mode', 'true');
+            } else {
+                document.body.classList.remove('dark-mode');
+                localStorage.setItem('dark-mode', 'false');
+            }
+        });
+    </script>
+
+</body>
+</html>

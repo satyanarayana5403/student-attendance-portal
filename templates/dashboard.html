@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Attendance Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(to right, #ffecd2, #fcb69f);
+            padding: 2rem;
+            color: #333;
+            transition: background 0.3s, color 0.3s;
+        }
+
+        h2 {
+            text-align: center;
+            color: #444;
+        }
+
+        .entry-group {
+            margin-bottom: 2rem;
+        }
+
+        .entry-group h3 {
+            background: #ffccbc;
+            padding: 10px;
+            border-radius: 8px;
+        }
+
+        ul {
+            list-style: none;
+            padding-left: 1rem;
+        }
+
+        li {
+            padding: 5px 0;
+        }
+
+        .back-btn {
+            display: inline-block;
+            padding: 10px 20px;
+            background: #ff7043;
+            color: white;
+            border-radius: 8px;
+            text-decoration: none;
+        }
+
+        .back-btn:hover {
+            background: #f4511e;
+        }
+
+        .btn-download {
+            display: inline-block;
+            padding: 10px 20px;
+            background: linear-gradient(to right, #4facfe, #00f2fe);
+            color: white;
+            font-weight: 600;
+            border: none;
+            border-radius: 8px;
+            text-decoration: none;
+            font-family: 'Inter', sans-serif;
+            transition: background 0.3s ease;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+        
+        .btn-download:hover {
+            background: linear-gradient(to right, #43e97b, #38f9d7);
+        }
+
+        /* Dark mode styles */
+        body.dark-mode {
+            background: linear-gradient(to right, #1f1c2c, #928dab);
+            color: #f0f0f0;
+        }
+
+        body.dark-mode h2,
+        body.dark-mode h3 {
+            color: #f0f0f0;
+        }
+
+        body.dark-mode .entry-group h3 {
+            background: #3c3c5b;
+        }
+
+        body.dark-mode .back-btn {
+            background: #333;
+            color: #eee;
+        }
+
+        body.dark-mode .back-btn:hover {
+            background: #444;
+        }
+
+        /* Toggle container */
+        .dark-toggle-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+
+        .dark-toggle-container label {
+            font-weight: bold;
+            color: white;
+            cursor: pointer;
+        }
+
+        .dark-toggle-container input {
+            transform: scale(1.5);
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="dark-toggle-container">
+        <label>
+            <input type="checkbox" id="dark-toggle">
+            🌙 Dark Mode
+        </label>
+    </div>
+
+    <h2>📊 Attendance Dashboard</h2>
+
+    {% for date, entries in grouped_logs.items() %}
+        <div class="entry-group">
+            <h3>{{ date }}</h3>
+            <ul>
+                {% for row in entries %}
+                    <li>{{ row['Time'] }} — {{ row['Name'] }} ({{ row['UID'] }})</li>
+                {% endfor %}
+            </ul>
+        </div>
+    {% endfor %}
+    <a href="{{ url_for('index') }}" class="back-btn">⬅ Back to Home</a>
+    <a href="{{ url_for('download_qr_pdf') }}" class="btn-download">📥 Download All QR Codes</a>
+
+    <script>
+        const darkToggle = document.getElementById('dark-toggle');
+        const prefersDark = localStorage.getItem('dark-mode') === 'true';
+
+        if (prefersDark) {
+            document.body.classList.add('dark-mode');
+            darkToggle.checked = true;
+        }
+
+        darkToggle.addEventListener('change', () => {
+            if (darkToggle.checked) {
+                document.body.classList.add('dark-mode');
+                localStorage.setItem('dark-mode', 'true');
+            } else {
+                document.body.classList.remove('dark-mode');
+                localStorage.setItem('dark-mode', 'false');
+            }
+        });
+    </script>
+</body>
+</html>

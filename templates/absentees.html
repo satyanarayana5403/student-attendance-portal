@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Absent Report</title>
+</head>
+<body>
+    <h2>Absentees on {{ date }}</h2>
+    {% if absentees %}
+        <ul>
+            {% for uid, name in absentees %}
+                <li>{{ name }} ({{ uid }})</li>
+            {% endfor %}
+        </ul>
+        <a href="{{ url_for('send_absent_emails') }}">Send Email Notifications</a>
+    {% else %}
+        <p>No absentees today!</p>
+    {% endif %}
+    <br><a href="{{ url_for('index') }}">Back to Home</a>
+</body>
+</html>
