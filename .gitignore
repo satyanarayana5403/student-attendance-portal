@@ -1,16 +1,21 @@
-echo __pycache__/ > .gitignore
-echo *.pyc >> .gitignore
-echo .vscode/ >> .gitignore
-echo *.csv >> .gitignore
-echo *.xlsx >> .gitignore
-echo *.pdf >> .gitignore
-echo credentials.json >> .gitignore
-echo token.json >> .gitignore
-echo __pycache__/ > .gitignore
-echo *.pyc >> .gitignore
-echo .vscode/ >> .gitignore
-echo *.csv >> .gitignore
-echo *.xlsx >> .gitignore
-echo *.pdf >> .gitignore
-echo credentials.json >> .gitignore
-echo token.json >> .gitignore
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.db
+*.sqlite3
+*.log
+
+# Environment files
+.env
+venv/
+*.env
+
+# Credentials (DO NOT push API keys!)
+credentials.json
+
+# Temporary or generated files
+*.xlsx
+attendance.csv
+attendance_log.csv
+qr_codes.pdf  # if generated dynamically
