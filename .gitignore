@@ -12,6 +12,7 @@ venv/
 *.env
 
 # Credentials (DO NOT push API keys!)
+# Credentials
 credentials.json
 
 # Temporary or generated files
