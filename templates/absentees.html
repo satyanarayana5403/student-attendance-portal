@@ -1,20 +1,625 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Absent Report</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Absent Report — Nexus</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #0a0a0f;
+  --surface: #111118;
+  --surface-2: #18181f;
+  --border: rgba(255,255,255,0.07);
+  --border-hover: rgba(255,255,255,0.13);
+  --accent: #6366f1;
+  --accent-2: #8b5cf6;
+  --accent-green: #10b981;
+  --accent-amber: #f59e0b;
+  --accent-red: #ef4444;
+  --text: #f1f1f3;
+  --text-2: #8b8b9a;
+  --text-3: #55555f;
+  --mono: 'JetBrains Mono', monospace;
+  --sans: 'DM Sans', sans-serif;
+  --radius: 14px;
+  --radius-sm: 8px;
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: var(--sans);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.4;
+}
+
+.ambient {
+  position: fixed;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 0;
+  filter: blur(120px);
+}
+.ambient-1 {
+  width: 600px; height: 600px;
+  top: -200px; left: -150px;
+  background: radial-gradient(circle, rgba(99,102,241,0.09) 0%, transparent 70%);
+}
+.ambient-2 {
+  width: 500px; height: 500px;
+  bottom: -100px; right: -100px;
+  background: radial-gradient(circle, rgba(239,68,68,0.06) 0%, transparent 70%);
+}
+
+/* ── LAYOUT ── */
+.shell {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  min-height: 100vh;
+}
+
+/* ── SIDEBAR ── */
+.sidebar {
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+}
+
+.sidebar-header {
+  padding: 28px 24px 24px;
+  border-bottom: 1px solid var(--border);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+}
+
+.brand-icon {
+  width: 32px; height: 32px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; flex-shrink: 0;
+}
+
+.brand-name { font-size: 15px; font-weight: 600; color: var(--text); letter-spacing: -0.01em; }
+.brand-sub  { font-size: 11px; color: var(--text-3); font-family: var(--mono); letter-spacing: 0.05em; text-transform: uppercase; }
+
+.sidebar-nav { padding: 16px 12px; flex: 1; }
+
+.nav-section-label {
+  font-size: 10px; font-family: var(--mono); letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--text-3);
+  padding: 0 12px; margin: 16px 0 6px;
+}
+
+.nav-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 12px; border-radius: var(--radius-sm);
+  font-size: 14px; font-weight: 400; color: var(--text-2);
+  text-decoration: none; cursor: pointer; transition: all 0.15s;
+  border: none; background: none; width: 100%; text-align: left;
+}
+
+.nav-item:hover { background: var(--surface-2); color: var(--text); }
+.nav-item.active { background: rgba(99,102,241,0.1); color: var(--accent); font-weight: 500; }
+.nav-item .ni { font-size: 15px; opacity: 0.7; width: 18px; text-align: center; }
+.nav-item.active .ni { opacity: 1; }
+
+.nav-badge {
+  margin-left: auto; font-size: 11px; font-family: var(--mono);
+  background: rgba(99,102,241,0.15); color: var(--accent);
+  padding: 1px 7px; border-radius: 20px;
+}
+
+.sidebar-footer {
+  padding: 16px 24px;
+  border-top: 1px solid var(--border);
+}
+
+.system-status { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-2); }
+
+.status-pip {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--accent-green);
+  box-shadow: 0 0 6px var(--accent-green);
+  animation: blink 2.5s ease-in-out infinite;
+}
+
+@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+/* ── MAIN ── */
+.main { display: flex; flex-direction: column; min-height: 100vh; }
+
+.topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 20px 32px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(10,10,15,0.8);
+  backdrop-filter: blur(12px);
+  position: sticky; top: 0; z-index: 100;
+}
+
+.page-title { font-size: 15px; font-weight: 500; color: var(--text); }
+.breadcrumb { font-size: 13px; color: var(--text-3); font-family: var(--mono); }
+
+.topbar-right { display: flex; align-items: center; gap: 12px; }
+
+.date-chip {
+  font-size: 12px; font-family: var(--mono); color: var(--text-2);
+  background: var(--surface-2); border: 1px solid var(--border);
+  padding: 6px 12px; border-radius: 6px;
+}
+
+.avatar {
+  width: 32px; height: 32px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 600; color: white;
+}
+
+.content { padding: 32px; flex: 1; }
+
+/* ── ANIMATIONS ── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.content > * { animation: fadeUp 0.35s ease both; }
+.content > *:nth-child(1) { animation-delay: 0.05s; }
+.content > *:nth-child(2) { animation-delay: 0.10s; }
+.content > *:nth-child(3) { animation-delay: 0.15s; }
+.content > *:nth-child(4) { animation-delay: 0.20s; }
+
+/* ── SUMMARY STRIP ── */
+.summary-strip {
+  display: flex; align-items: center; gap: 16px;
+  padding: 16px 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.summary-item {
+  display: flex; align-items: center; gap: 10px;
+}
+
+.summary-icon {
+  width: 36px; height: 36px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 15px;
+}
+
+.summary-icon.red   { background: rgba(239,68,68,0.1); }
+.summary-icon.amber { background: rgba(245,158,11,0.1); }
+.summary-icon.indigo{ background: rgba(99,102,241,0.1); }
+
+.summary-val  { font-size: 18px; font-weight: 600; color: var(--text); letter-spacing: -0.02em; line-height: 1; }
+.summary-label{ font-size: 11px; color: var(--text-3); font-family: var(--mono); text-transform: uppercase; letter-spacing: 0.06em; }
+
+.summary-divider { width: 1px; height: 36px; background: var(--border); margin: 0 4px; }
+
+.summary-right { margin-left: auto; }
+
+/* ── ACTION ROW ── */
+.action-row {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 20px;
+}
+
+.btn-primary {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 10px 18px;
+  background: var(--accent-red);
+  color: white; border: none;
+  border-radius: var(--radius-sm);
+  font-family: var(--sans); font-size: 13px; font-weight: 500;
+  cursor: pointer; text-decoration: none;
+  transition: all 0.15s; letter-spacing: -0.01em;
+}
+
+.btn-primary:hover {
+  background: #dc2626;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 20px rgba(239,68,68,0.3);
+}
+
+.btn-primary:active { transform: translateY(0); }
+
+.btn-secondary {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 10px 18px;
+  background: var(--surface-2); border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-family: var(--sans); font-size: 13px; font-weight: 500;
+  color: var(--text-2); cursor: pointer; text-decoration: none;
+  transition: all 0.15s;
+}
+
+.btn-secondary:hover { border-color: var(--border-hover); color: var(--text); background: var(--surface); }
+
+.btn-icon { font-size: 14px; }
+
+/* ── SEARCH BAR ── */
+.search-wrap {
+  position: relative; margin-left: auto;
+}
+
+.search-wrap input {
+  padding: 9px 12px 9px 36px;
+  background: var(--surface-2); border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-family: var(--mono); font-size: 12px; letter-spacing: 0.04em;
+  color: var(--text); outline: none; width: 220px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.search-wrap input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(99,102,241,0.12);
+}
+
+.search-wrap input::placeholder { color: var(--text-3); font-family: var(--sans); font-size: 12px; letter-spacing: 0; }
+
+.search-icon {
+  position: absolute; left: 11px; top: 50%; transform: translateY(-50%);
+  font-size: 13px; color: var(--text-3); pointer-events: none;
+}
+
+/* ── TABLE PANEL ── */
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+
+.panel-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 20px; border-bottom: 1px solid var(--border);
+}
+
+.panel-title {
+  font-size: 13px; font-weight: 500; color: var(--text);
+  display: flex; align-items: center; gap: 8px;
+}
+
+.panel-title-icon {
+  width: 24px; height: 24px; border-radius: 6px;
+  display: flex; align-items: center; justify-content: center; font-size: 12px;
+}
+
+.panel-title-icon.red { background: rgba(239,68,68,0.1); }
+
+.panel-meta { font-size: 12px; font-family: var(--mono); color: var(--text-3); }
+
+.absentee-table { width: 100%; border-collapse: collapse; }
+
+.absentee-table thead { background: var(--surface-2); border-bottom: 1px solid var(--border); }
+
+.absentee-table th {
+  padding: 10px 16px; font-size: 11px; font-family: var(--mono);
+  text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-3);
+  font-weight: 400; text-align: left;
+}
+
+.absentee-table td {
+  padding: 13px 16px; font-size: 13px; color: var(--text-2);
+  border-bottom: 1px solid var(--border);
+  transition: background 0.1s;
+}
+
+.absentee-table tbody tr:last-child td { border-bottom: none; }
+.absentee-table tbody tr:hover { background: var(--surface-2); }
+
+.td-index { font-family: var(--mono); font-size: 11px; color: var(--text-3); width: 48px; }
+.td-name  { font-size: 14px; color: var(--text); font-weight: 400; }
+.td-uid   { font-family: var(--mono); font-size: 12px; color: var(--text-3); }
+
+.badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 8px; border-radius: 4px;
+  font-size: 11px; font-family: var(--mono); font-weight: 500;
+}
+
+.badge.absent { background: rgba(239,68,68,0.1); color: #ef4444; }
+.badge-dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+
+/* ── EMPTY STATE ── */
+.empty-state {
+  padding: 60px 20px; text-align: center;
+}
+
+.empty-icon { font-size: 40px; opacity: 0.15; margin-bottom: 16px; }
+
+.empty-title { font-size: 15px; font-weight: 500; color: var(--text); margin-bottom: 6px; }
+.empty-sub   { font-size: 13px; color: var(--text-3); }
+
+.empty-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  margin-top: 16px; padding: 6px 14px;
+  background: rgba(16,185,129,0.08);
+  border: 1px solid rgba(16,185,129,0.2);
+  border-radius: 20px; font-size: 12px; font-family: var(--mono);
+  color: var(--accent-green);
+}
+
+/* ── RESPONSIVE ── */
+@media (max-width: 900px) {
+  .shell { grid-template-columns: 1fr; }
+  .sidebar { display: none; }
+  .content { padding: 20px; }
+  .action-row { flex-wrap: wrap; }
+  .search-wrap { margin-left: 0; width: 100%; }
+  .search-wrap input { width: 100%; }
+}
+
+/* ── LOADER ── */
+#page-loader {
+  position: fixed; inset: 0; background: var(--bg); z-index: 9000;
+  display: flex; align-items: center; justify-content: center;
+  flex-direction: column; gap: 16px; transition: opacity 0.5s;
+}
+#page-loader.gone { opacity: 0; pointer-events: none; }
+
+.loader-bar { width: 180px; height: 2px; background: var(--surface-2); border-radius: 99px; overflow: hidden; }
+.loader-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--accent-red));
+  border-radius: 99px;
+  animation: loaderFill 1s ease forwards;
+}
+@keyframes loaderFill { from { width: 0%; } to { width: 100%; } }
+.loader-label { font-size: 11px; font-family: var(--mono); color: var(--text-3); letter-spacing: 0.1em; text-transform: uppercase; }
+</style>
 </head>
 <body>
-    <h2>Absentees on {{ date }}</h2>
-    {% if absentees %}
-        <ul>
+
+<div id="page-loader">
+  <div style="font-size:12px;font-family:var(--mono);color:var(--text-3);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:4px">Nexus Attendance</div>
+  <div class="loader-bar"><div class="loader-bar-fill"></div></div>
+  <div class="loader-label">Loading Report</div>
+</div>
+
+<div class="ambient ambient-1"></div>
+<div class="ambient ambient-2"></div>
+
+<div class="shell">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <a class="brand" href="{{ url_for('index') }}">
+        <div class="brand-icon">⬡</div>
+        <div>
+          <div class="brand-name">Nexus</div>
+          <div class="brand-sub">Attendance</div>
+        </div>
+      </a>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Main</div>
+      <a class="nav-item" href="{{ url_for('index') }}">
+        <span class="ni">◈</span> Mark Attendance
+      </a>
+      <a class="nav-item" href="/dashboard">
+        <span class="ni">▦</span> Dashboard
+        <span class="nav-badge">Live</span>
+      </a>
+      <a class="nav-item active" href="#">
+        <span class="ni">◎</span> Absent Report
+      </a>
+
+      <div class="nav-section-label" style="margin-top:20px">Management</div>
+      <a class="nav-item" href="#">
+        <span class="ni">⊕</span> Students
+      </a>
+      <a class="nav-item" href="#">
+        <span class="ni">◻</span> Sessions
+      </a>
+      <a class="nav-item" href="#">
+        <span class="ni">◈</span> Settings
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="system-status">
+        <div class="status-pip"></div>
+        <span style="font-size:12px;color:var(--text-2)">System Online</span>
+        <span style="font-size:11px;color:var(--text-3);font-family:var(--mono);margin-left:auto" id="live-time"></span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+
+    <div class="topbar">
+      <div>
+        <div class="page-title">Absent Report</div>
+        <div class="breadcrumb">nexus / attendance / report</div>
+      </div>
+      <div class="topbar-right">
+        <div class="date-chip">{{ date }}</div>
+        <div class="avatar">NX</div>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- SUMMARY STRIP -->
+      <div class="summary-strip">
+        <div class="summary-item">
+          <div class="summary-icon red">⚠</div>
+          <div>
+            <div class="summary-val" id="absent-count">
+              {% if absentees %}{{ absentees|length }}{% else %}0{% endif %}
+            </div>
+            <div class="summary-label">Absent</div>
+          </div>
+        </div>
+
+        <div class="summary-divider"></div>
+
+        <div class="summary-item">
+          <div class="summary-icon amber">📅</div>
+          <div>
+            <div class="summary-val" style="font-size:14px">{{ date }}</div>
+            <div class="summary-label">Report Date</div>
+          </div>
+        </div>
+
+        <div class="summary-divider"></div>
+
+        <div class="summary-item">
+          <div class="summary-icon indigo">◎</div>
+          <div>
+            <div class="summary-val" style="font-size:14px">Daily</div>
+            <div class="summary-label">Report Type</div>
+          </div>
+        </div>
+
+        {% if absentees %}
+        <div class="summary-right">
+          <a href="{{ url_for('send_absent_emails') }}" class="btn-primary">
+            <span class="btn-icon">✉</span> Send Email Notifications
+          </a>
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- ACTION ROW -->
+      <div class="action-row">
+        <a href="{{ url_for('index') }}" class="btn-secondary">
+          <span class="btn-icon">←</span> Back to Attendance
+        </a>
+
+        {% if absentees %}
+        <div class="search-wrap">
+          <span class="search-icon">⌕</span>
+          <input type="text" id="search-input" placeholder="Search by name or UID…">
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- TABLE / EMPTY STATE -->
+      {% if absentees %}
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">
+            <div class="panel-title-icon red">⚠</div>
+            Absentees
+          </div>
+          <div class="panel-meta" id="row-count">{{ absentees|length }} student{% if absentees|length != 1 %}s{% endif %}</div>
+        </div>
+
+        <table class="absentee-table" id="absentee-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Name</th>
+              <th>UID</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
             {% for uid, name in absentees %}
-                <li>{{ name }} ({{ uid }})</li>
+            <tr>
+              <td class="td-index">{{ loop.index }}</td>
+              <td class="td-name">{{ name }}</td>
+              <td class="td-uid">{{ uid }}</td>
+              <td><span class="badge absent"><span class="badge-dot"></span>Absent</span></td>
+            </tr>
             {% endfor %}
-        </ul>
-        <a href="{{ url_for('send_absent_emails') }}">Send Email Notifications</a>
-    {% else %}
-        <p>No absentees today!</p>
-    {% endif %}
-    <br><a href="{{ url_for('index') }}">Back to Home</a>
+          </tbody>
+        </table>
+      </div>
+
+      {% else %}
+      <div class="panel">
+        <div class="empty-state">
+          <div class="empty-icon">✓</div>
+          <div class="empty-title">All present today</div>
+          <div class="empty-sub">No absentees recorded for {{ date }}</div>
+          <div class="empty-badge">
+            <span>●</span> Full attendance
+          </div>
+        </div>
+      </div>
+      {% endif %}
+
+    </div>
+  </main>
+
+</div>
+
+<script>
+/* ── TIME ── */
+function updateTime() {
+  const t = new Date().toLocaleTimeString('en-US', { hour12: false });
+  const el = document.getElementById('live-time');
+  if (el) el.textContent = t;
+}
+setInterval(updateTime, 1000);
+updateTime();
+
+/* ── SEARCH FILTER ── */
+const searchInput = document.getElementById('search-input');
+if (searchInput) {
+  searchInput.addEventListener('input', function() {
+    const q = this.value.toLowerCase().trim();
+    const rows = document.querySelectorAll('#absentee-table tbody tr');
+    let visible = 0;
+    rows.forEach(row => {
+      const name = row.querySelector('.td-name')?.textContent.toLowerCase() || '';
+      const uid  = row.querySelector('.td-uid')?.textContent.toLowerCase() || '';
+      const match = !q || name.includes(q) || uid.includes(q);
+      row.style.display = match ? '' : 'none';
+      if (match) visible++;
+    });
+    const counter = document.getElementById('row-count');
+    if (counter) counter.textContent = visible + ' student' + (visible !== 1 ? 's' : '');
+  });
+}
+
+/* ── LOADER ── */
+window.addEventListener('load', () => {
+  setTimeout(() => {
+    const l = document.getElementById('page-loader');
+    if (l) { l.classList.add('gone'); setTimeout(() => l.remove(), 600); }
+  }, 900);
+});
+</script>
 </body>
 </html>

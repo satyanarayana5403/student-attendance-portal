@@ -1,159 +1,524 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Attendance Dashboard</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
-    <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            background: linear-gradient(to right, #ffecd2, #fcb69f);
-            padding: 2rem;
-            color: #333;
-            transition: background 0.3s, color 0.3s;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard — Nexus</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-        h2 {
-            text-align: center;
-            color: #444;
-        }
+:root {
+  --bg: #0a0a0f;
+  --surface: #111118;
+  --surface-2: #18181f;
+  --border: rgba(255,255,255,0.07);
+  --border-hover: rgba(255,255,255,0.13);
+  --accent: #6366f1;
+  --accent-2: #8b5cf6;
+  --accent-green: #10b981;
+  --accent-amber: #f59e0b;
+  --accent-red: #ef4444;
+  --text: #f1f1f3;
+  --text-2: #8b8b9a;
+  --text-3: #55555f;
+  --mono: 'JetBrains Mono', monospace;
+  --sans: 'DM Sans', sans-serif;
+  --radius: 14px;
+  --radius-sm: 8px;
+}
 
-        .entry-group {
-            margin-bottom: 2rem;
-        }
+html { scroll-behavior: smooth; }
 
-        .entry-group h3 {
-            background: #ffccbc;
-            padding: 10px;
-            border-radius: 8px;
-        }
+body {
+  font-family: var(--sans);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
 
-        ul {
-            list-style: none;
-            padding-left: 1rem;
-        }
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events: none; z-index: 0; opacity: 0.4;
+}
 
-        li {
-            padding: 5px 0;
-        }
+.ambient {
+  position: fixed; border-radius: 50%;
+  pointer-events: none; z-index: 0; filter: blur(120px);
+}
+.ambient-1 {
+  width: 600px; height: 600px; top: -200px; left: -150px;
+  background: radial-gradient(circle, rgba(99,102,241,0.09) 0%, transparent 70%);
+}
+.ambient-2 {
+  width: 500px; height: 500px; bottom: -100px; right: -100px;
+  background: radial-gradient(circle, rgba(139,92,246,0.07) 0%, transparent 70%);
+}
 
-        .back-btn {
-            display: inline-block;
-            padding: 10px 20px;
-            background: #ff7043;
-            color: white;
-            border-radius: 8px;
-            text-decoration: none;
-        }
+/* ── LAYOUT ── */
+.shell {
+  position: relative; z-index: 1;
+  display: grid; grid-template-columns: 240px 1fr;
+  min-height: 100vh;
+}
 
-        .back-btn:hover {
-            background: #f4511e;
-        }
+/* ── SIDEBAR ── */
+.sidebar {
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  position: sticky; top: 0; height: 100vh; overflow-y: auto;
+}
 
-        .btn-download {
-            display: inline-block;
-            padding: 10px 20px;
-            background: linear-gradient(to right, #4facfe, #00f2fe);
-            color: white;
-            font-weight: 600;
-            border: none;
-            border-radius: 8px;
-            text-decoration: none;
-            font-family: 'Inter', sans-serif;
-            transition: background 0.3s ease;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-        }
-        
-        .btn-download:hover {
-            background: linear-gradient(to right, #43e97b, #38f9d7);
-        }
+.sidebar-header { padding: 28px 24px 24px; border-bottom: 1px solid var(--border); }
 
-        /* Dark mode styles */
-        body.dark-mode {
-            background: linear-gradient(to right, #1f1c2c, #928dab);
-            color: #f0f0f0;
-        }
+.brand { display: flex; align-items: center; gap: 10px; text-decoration: none; }
 
-        body.dark-mode h2,
-        body.dark-mode h3 {
-            color: #f0f0f0;
-        }
+.brand-icon {
+  width: 32px; height: 32px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  border-radius: 8px; display: flex; align-items: center; justify-content: center;
+  font-size: 14px; flex-shrink: 0;
+}
 
-        body.dark-mode .entry-group h3 {
-            background: #3c3c5b;
-        }
+.brand-name { font-size: 15px; font-weight: 600; color: var(--text); letter-spacing: -0.01em; }
+.brand-sub  { font-size: 11px; color: var(--text-3); font-family: var(--mono); letter-spacing: 0.05em; text-transform: uppercase; }
 
-        body.dark-mode .back-btn {
-            background: #333;
-            color: #eee;
-        }
+.sidebar-nav { padding: 16px 12px; flex: 1; }
 
-        body.dark-mode .back-btn:hover {
-            background: #444;
-        }
+.nav-section-label {
+  font-size: 10px; font-family: var(--mono); letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--text-3);
+  padding: 0 12px; margin: 16px 0 6px;
+}
 
-        /* Toggle container */
-        .dark-toggle-container {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            z-index: 1000;
-        }
+.nav-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 12px; border-radius: var(--radius-sm);
+  font-size: 14px; font-weight: 400; color: var(--text-2);
+  text-decoration: none; cursor: pointer; transition: all 0.15s;
+  border: none; background: none; width: 100%; text-align: left;
+}
 
-        .dark-toggle-container label {
-            font-weight: bold;
-            color: white;
-            cursor: pointer;
-        }
+.nav-item:hover { background: var(--surface-2); color: var(--text); }
+.nav-item.active { background: rgba(99,102,241,0.1); color: var(--accent); font-weight: 500; }
+.nav-item .ni { font-size: 15px; opacity: 0.7; width: 18px; text-align: center; }
+.nav-item.active .ni { opacity: 1; }
 
-        .dark-toggle-container input {
-            transform: scale(1.5);
-            margin-right: 10px;
-        }
-    </style>
+.nav-badge {
+  margin-left: auto; font-size: 11px; font-family: var(--mono);
+  background: rgba(99,102,241,0.15); color: var(--accent);
+  padding: 1px 7px; border-radius: 20px;
+}
+
+.sidebar-footer { padding: 16px 24px; border-top: 1px solid var(--border); }
+
+.system-status { display: flex; align-items: center; gap: 8px; }
+
+.status-pip {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--accent-green);
+  box-shadow: 0 0 6px var(--accent-green);
+  animation: blink 2.5s ease-in-out infinite;
+}
+
+@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+/* ── MAIN ── */
+.main { display: flex; flex-direction: column; min-height: 100vh; }
+
+.topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 20px 32px; border-bottom: 1px solid var(--border);
+  background: rgba(10,10,15,0.8); backdrop-filter: blur(12px);
+  position: sticky; top: 0; z-index: 100;
+}
+
+.page-title { font-size: 15px; font-weight: 500; color: var(--text); }
+.breadcrumb { font-size: 13px; color: var(--text-3); font-family: var(--mono); }
+
+.topbar-right { display: flex; align-items: center; gap: 12px; }
+
+.date-chip {
+  font-size: 12px; font-family: var(--mono); color: var(--text-2);
+  background: var(--surface-2); border: 1px solid var(--border);
+  padding: 6px 12px; border-radius: 6px;
+}
+
+.btn-download {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 8px 14px;
+  background: var(--surface-2); border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-family: var(--sans); font-size: 13px; font-weight: 500;
+  color: var(--text-2); text-decoration: none;
+  transition: all 0.15s;
+}
+
+.btn-download:hover {
+  border-color: var(--accent); color: var(--accent);
+  background: rgba(99,102,241,0.07);
+  box-shadow: 0 0 0 3px rgba(99,102,241,0.1);
+}
+
+.avatar {
+  width: 32px; height: 32px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 600; color: white;
+}
+
+/* ── CONTENT ── */
+.content { padding: 32px; flex: 1; }
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── TOOLBAR ── */
+.toolbar {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 24px;
+  animation: fadeUp 0.3s ease both;
+}
+
+.search-wrap { position: relative; margin-left: auto; }
+
+.search-wrap input {
+  padding: 9px 12px 9px 36px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); font-family: var(--mono);
+  font-size: 12px; letter-spacing: 0.04em; color: var(--text);
+  outline: none; width: 240px; transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.search-wrap input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(99,102,241,0.12);
+}
+
+.search-wrap input::placeholder { color: var(--text-3); font-family: var(--sans); font-size: 12px; letter-spacing: 0; }
+.search-icon { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); font-size: 13px; color: var(--text-3); pointer-events: none; }
+
+.toolbar-count {
+  font-size: 12px; font-family: var(--mono); color: var(--text-3);
+  background: var(--surface); border: 1px solid var(--border);
+  padding: 6px 12px; border-radius: 6px;
+}
+
+/* ── DATE GROUP ── */
+.date-group {
+  margin-bottom: 20px;
+  animation: fadeUp 0.35s ease both;
+}
+
+.date-group:nth-child(1) { animation-delay: 0.05s; }
+.date-group:nth-child(2) { animation-delay: 0.10s; }
+.date-group:nth-child(3) { animation-delay: 0.15s; }
+.date-group:nth-child(4) { animation-delay: 0.20s; }
+.date-group:nth-child(5) { animation-delay: 0.25s; }
+
+.date-header {
+  display: flex; align-items: center; gap: 12px;
+  margin-bottom: 1px;
+}
+
+.date-label {
+  font-size: 11px; font-family: var(--mono); text-transform: uppercase;
+  letter-spacing: 0.08em; color: var(--text-3);
+  padding: 6px 12px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-bottom: none;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  display: flex; align-items: center; gap: 8px;
+}
+
+.date-count {
+  background: var(--surface-2); border: 1px solid var(--border);
+  border-radius: 20px; padding: 1px 8px;
+  font-size: 10px; font-family: var(--mono); color: var(--text-3);
+}
+
+/* ── LOG TABLE ── */
+.panel {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 0 var(--radius) var(--radius) var(--radius);
+  overflow: hidden;
+}
+
+.log-table { width: 100%; border-collapse: collapse; }
+
+.log-table thead { background: var(--surface-2); border-bottom: 1px solid var(--border); }
+
+.log-table th {
+  padding: 10px 16px; font-size: 11px; font-family: var(--mono);
+  text-transform: uppercase; letter-spacing: 0.08em;
+  color: var(--text-3); font-weight: 400; text-align: left;
+}
+
+.log-table td {
+  padding: 12px 16px; font-size: 13px; color: var(--text-2);
+  border-bottom: 1px solid var(--border); transition: background 0.1s;
+}
+
+.log-table tbody tr:last-child td { border-bottom: none; }
+.log-table tbody tr:hover { background: var(--surface-2); }
+
+.td-time  { font-family: var(--mono); font-size: 11px; color: var(--text-3); width: 90px; }
+.td-name  { font-size: 14px; color: var(--text); font-weight: 400; }
+.td-uid   { font-family: var(--mono); font-size: 12px; color: var(--text-3); }
+
+.badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 8px; border-radius: 4px;
+  font-size: 11px; font-family: var(--mono); font-weight: 500;
+}
+.badge.present { background: rgba(16,185,129,0.1); color: #10b981; }
+.badge-dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+
+/* ── EMPTY STATE ── */
+.empty-full {
+  padding: 80px 20px; text-align: center;
+  animation: fadeUp 0.4s ease both;
+}
+.empty-icon { font-size: 40px; opacity: 0.12; margin-bottom: 16px; }
+.empty-title { font-size: 15px; font-weight: 500; color: var(--text); margin-bottom: 6px; }
+.empty-sub { font-size: 13px; color: var(--text-3); }
+
+/* ── BACK BTN ── */
+.btn-back {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 9px 16px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); font-family: var(--sans);
+  font-size: 13px; font-weight: 500; color: var(--text-2);
+  text-decoration: none; transition: all 0.15s;
+}
+.btn-back:hover { border-color: var(--border-hover); color: var(--text); }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 900px) {
+  .shell { grid-template-columns: 1fr; }
+  .sidebar { display: none; }
+  .content { padding: 20px; }
+  .topbar { padding: 16px 20px; }
+  .toolbar { flex-wrap: wrap; }
+  .search-wrap { margin-left: 0; width: 100%; }
+  .search-wrap input { width: 100%; }
+  .btn-download span { display: none; }
+}
+
+/* ── LOADER ── */
+#page-loader {
+  position: fixed; inset: 0; background: var(--bg); z-index: 9000;
+  display: flex; align-items: center; justify-content: center;
+  flex-direction: column; gap: 16px; transition: opacity 0.5s;
+}
+#page-loader.gone { opacity: 0; pointer-events: none; }
+
+.loader-bar { width: 180px; height: 2px; background: var(--surface-2); border-radius: 99px; overflow: hidden; }
+.loader-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  border-radius: 99px;
+  animation: loaderFill 1s ease forwards;
+}
+@keyframes loaderFill { from { width: 0%; } to { width: 100%; } }
+.loader-label { font-size: 11px; font-family: var(--mono); color: var(--text-3); letter-spacing: 0.1em; text-transform: uppercase; }
+</style>
 </head>
 <body>
 
-    <div class="dark-toggle-container">
-        <label>
-            <input type="checkbox" id="dark-toggle">
-            🌙 Dark Mode
-        </label>
+<div id="page-loader">
+  <div style="font-size:12px;font-family:var(--mono);color:var(--text-3);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:4px">Nexus Attendance</div>
+  <div class="loader-bar"><div class="loader-bar-fill"></div></div>
+  <div class="loader-label">Loading Dashboard</div>
+</div>
+
+<div class="ambient ambient-1"></div>
+<div class="ambient ambient-2"></div>
+
+<div class="shell">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <a class="brand" href="{{ url_for('index') }}">
+        <div class="brand-icon">⬡</div>
+        <div>
+          <div class="brand-name">Nexus</div>
+          <div class="brand-sub">Attendance</div>
+        </div>
+      </a>
     </div>
 
-    <h2>📊 Attendance Dashboard</h2>
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Main</div>
+      <a class="nav-item" href="{{ url_for('index') }}">
+        <span class="ni">◈</span> Mark Attendance
+      </a>
+      <a class="nav-item active" href="#">
+        <span class="ni">▦</span> Dashboard
+        <span class="nav-badge">Live</span>
+      </a>
+      <a class="nav-item" href="{{ url_for('report') }}">
+        <span class="ni">◎</span> Absent Report
+      </a>
 
-    {% for date, entries in grouped_logs.items() %}
-        <div class="entry-group">
-            <h3>{{ date }}</h3>
-            <ul>
-                {% for row in entries %}
-                    <li>{{ row['Time'] }} — {{ row['Name'] }} ({{ row['UID'] }})</li>
-                {% endfor %}
-            </ul>
+      <div class="nav-section-label" style="margin-top:20px">Management</div>
+      <a class="nav-item" href="#">
+        <span class="ni">⊕</span> Students
+      </a>
+      <a class="nav-item" href="#">
+        <span class="ni">◻</span> Sessions
+      </a>
+      <a class="nav-item" href="#">
+        <span class="ni">◈</span> Settings
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="system-status">
+        <div class="status-pip"></div>
+        <span style="font-size:12px;color:var(--text-2)">System Online</span>
+        <span style="font-size:11px;color:var(--text-3);font-family:var(--mono);margin-left:auto" id="live-time"></span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+
+    <div class="topbar">
+      <div>
+        <div class="page-title">Attendance Dashboard</div>
+        <div class="breadcrumb">nexus / attendance / dashboard</div>
+      </div>
+      <div class="topbar-right">
+        <a href="{{ url_for('download_qr_pdf') }}" class="btn-download">
+          <span>↓</span> <span>Download QR PDF</span>
+        </a>
+        <div class="date-chip" id="date-chip">—</div>
+        <div class="avatar">NX</div>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <div class="toolbar">
+        <a href="{{ url_for('index') }}" class="btn-back">← Back</a>
+        <div class="toolbar-count" id="total-count">
+          <!-- filled by JS -->
         </div>
-    {% endfor %}
-    <a href="{{ url_for('index') }}" class="back-btn">⬅ Back to Home</a>
-    <a href="{{ url_for('download_qr_pdf') }}" class="btn-download">📥 Download All QR Codes</a>
+        <div class="search-wrap">
+          <span class="search-icon">⌕</span>
+          <input type="text" id="search-input" placeholder="Search by name or UID…">
+        </div>
+      </div>
 
-    <script>
-        const darkToggle = document.getElementById('dark-toggle');
-        const prefersDark = localStorage.getItem('dark-mode') === 'true';
+      <!-- GROUPED LOGS -->
+      <div id="groups-wrap">
+        {% if grouped_logs %}
+          {% for date, entries in grouped_logs.items() %}
+          <div class="date-group" data-date="{{ date }}">
+            <div class="date-header">
+              <div class="date-label">
+                ◈ {{ date }}
+                <span class="date-count">{{ entries|length }}</span>
+              </div>
+            </div>
+            <div class="panel">
+              <table class="log-table">
+                <thead>
+                  <tr>
+                    <th>Time</th>
+                    <th>Name</th>
+                    <th>UID</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for row in entries %}
+                  <tr class="log-row"
+                      data-name="{{ row['Name']|lower }}"
+                      data-uid="{{ row['UID']|lower }}">
+                    <td class="td-time">{{ row['Time'] }}</td>
+                    <td class="td-name">{{ row['Name'] }}</td>
+                    <td class="td-uid">{{ row['UID'] }}</td>
+                    <td><span class="badge present"><span class="badge-dot"></span>Present</span></td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          {% endfor %}
+        {% else %}
+          <div class="empty-full">
+            <div class="empty-icon">▦</div>
+            <div class="empty-title">No records yet</div>
+            <div class="empty-sub">Attendance entries will appear here once students are marked present.</div>
+          </div>
+        {% endif %}
+      </div>
 
-        if (prefersDark) {
-            document.body.classList.add('dark-mode');
-            darkToggle.checked = true;
-        }
+    </div>
+  </main>
 
-        darkToggle.addEventListener('change', () => {
-            if (darkToggle.checked) {
-                document.body.classList.add('dark-mode');
-                localStorage.setItem('dark-mode', 'true');
-            } else {
-                document.body.classList.remove('dark-mode');
-                localStorage.setItem('dark-mode', 'false');
-            }
-        });
-    </script>
+</div>
+
+<script>
+/* ── TIME ── */
+function updateTime() {
+  const t = new Date().toLocaleTimeString('en-US', { hour12: false });
+  const d = new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+  document.getElementById('live-time').textContent = t;
+  document.getElementById('date-chip').textContent = d;
+}
+setInterval(updateTime, 1000);
+updateTime();
+
+/* ── TOTAL COUNT ── */
+const allRows = document.querySelectorAll('.log-row');
+const countEl = document.getElementById('total-count');
+function updateCount(n) {
+  countEl.textContent = n + ' record' + (n !== 1 ? 's' : '');
+}
+updateCount(allRows.length);
+
+/* ── SEARCH ── */
+document.getElementById('search-input').addEventListener('input', function() {
+  const q = this.value.toLowerCase().trim();
+  let visible = 0;
+  document.querySelectorAll('.date-group').forEach(group => {
+    const rows = group.querySelectorAll('.log-row');
+    let groupVisible = 0;
+    rows.forEach(row => {
+      const name = row.dataset.name || '';
+      const uid  = row.dataset.uid  || '';
+      const match = !q || name.includes(q) || uid.includes(q);
+      row.style.display = match ? '' : 'none';
+      if (match) { groupVisible++; visible++; }
+    });
+    group.style.display = groupVisible > 0 ? '' : 'none';
+    const countBadge = group.querySelector('.date-count');
+    if (countBadge) countBadge.textContent = groupVisible;
+  });
+  updateCount(visible);
+});
+
+/* ── LOADER ── */
+window.addEventListener('load', () => {
+  setTimeout(() => {
+    const l = document.getElementById('page-loader');
+    if (l) { l.classList.add('gone'); setTimeout(() => l.remove(), 600); }
+  }, 900);
+});
+</script>
 </body>
 </html>

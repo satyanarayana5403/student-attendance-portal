@@ -1,79 +1,179 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, send_file
-import csv
-import os
+from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime, timedelta
 from collections import defaultdict
 from email_helper import send_email
 from gsheet_helper import append_to_gsheet
-from flask import send_file
 import pandas as pd
 from io import BytesIO
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import A4
-from reportlab.lib.pagesizes import A4
-from reportlab.pdfgen import canvas
 from reportlab.lib.utils import ImageReader
 import qrcode
-from io import BytesIO
+import csv
+import os
 
+# Initialize Flask app
 app = Flask(__name__)
-app.secret_key = 'your-secret-key'
+app.secret_key = os.getenv('SECRET_KEY', 'abc123-dev-only')
 
-STUDENT_FILE = 'students.csv'
-ATTENDANCE_FILE = 'attendance_log.csv'
+# Environment variables
+IS_PRODUCTION = os.getenv('FLASK_ENV') == 'production'
 
-# Load students from CSV
+# Database configuration
+DB_URL = os.getenv('DATABASE_URL', 'sqlite:///attendance.db')
+# Render uses postgresql:// but SQLAlchemy needs postgresql+psycopg2://
+if DB_URL.startswith('postgresql://'):
+    DB_URL = DB_URL.replace('postgresql://', 'postgresql+psycopg2://', 1)
+
+app.config['SQLALCHEMY_DATABASE_URI'] = DB_URL
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['TESTING'] = False
+
+# Initialize database
+db = SQLAlchemy(app)
+
+# ============ DATABASE MODELS ============
+
+class Student(db.Model):
+    __tablename__ = 'students'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    uid = db.Column(db.String(100), unique=True, nullable=False, index=True)
+    name = db.Column(db.String(255), nullable=False)
+    email = db.Column(db.String(255), default='')
+    created_at = db.Column(db.DateTime, default=datetime.now)
+    
+    # Relationship
+    attendance_records = db.relationship('Attendance', backref='student', lazy=True, cascade='all, delete-orphan')
+    
+    def __repr__(self):
+        return f'<Student {self.uid}: {self.name}>'
+
+
+class Attendance(db.Model):
+    __tablename__ = 'attendance'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    student_id = db.Column(db.Integer, db.ForeignKey('students.id'), nullable=False, index=True)
+    date = db.Column(db.String(10), nullable=False, index=True)
+    time = db.Column(db.String(8), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.now)
+    
+    # Unique constraint: one attendance per student per day
+    __table_args__ = (db.UniqueConstraint('student_id', 'date', name='unique_attendance_per_day'),)
+    
+    def __repr__(self):
+        return f'<Attendance {self.date} {self.time}>'
+
+
+# ============ DATABASE INITIALIZATION ============
+
+def init_db():
+    """Create database tables"""
+    with app.app_context():
+        db.create_all()
+        print("✓ Database initialized")
+
+
+def migrate_csv_to_db():
+    """Migrate existing CSV data to SQLite database"""
+    with app.app_context():
+        # Migrate students.csv
+        if os.path.exists('students.csv'):
+            print("Migrating students.csv...")
+            with open('students.csv', 'r') as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    if not Student.query.filter_by(uid=row['UID']).first():
+                        student = Student(
+                            uid=row['UID'],
+                            name=row['Name'],
+                            email=row.get('ParentEmail', '')
+                        )
+                        db.session.add(student)
+            db.session.commit()
+            print("✓ Students migrated")
+
+        # Migrate attendance_log.csv
+        if os.path.exists('attendance_log.csv'):
+            print("Migrating attendance_log.csv...")
+            with open('attendance_log.csv', 'r') as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    student = Student.query.filter_by(uid=row['UID']).first()
+                    if student:
+                        existing = Attendance.query.filter_by(
+                            student_id=student.id,
+                            date=row['Date']
+                        ).first()
+                        if not existing:
+                            attendance = Attendance(
+                                student_id=student.id,
+                                date=row['Date'],
+                                time=row['Time']
+                            )
+                            db.session.add(attendance)
+            db.session.commit()
+            print("✓ Attendance records migrated")
+
+
+# ============ DATABASE HELPER FUNCTIONS ============
+
 def get_present_uids(date):
-    present_uids = set()
-    if os.path.exists(ATTENDANCE_FILE):
-        with open(ATTENDANCE_FILE, 'r', newline='') as f:
-            reader = csv.DictReader(f)
-            for row in reader:
-                if row['Date'] == date:
-                    present_uids.add(row['UID'])
-    return present_uids
+    """Get set of student UIDs present on a given date"""
+    records = Attendance.query.filter_by(date=date).all()
+    return {record.student.uid for record in records}
 
-def load_students():
+
+def get_all_students():
+    """Get all students as dictionary"""
     students = {}
-    try:
-        with open(STUDENT_FILE, mode='r') as file:
-            reader = csv.DictReader(file)
-            for row in reader:
-                students[row['UID']] = {
-                    'name': row['Name'],
-                    'email': row.get('ParentEmail', '')
-                }
-    except FileNotFoundError:
-        print("students.csv not found.")
+    for student in Student.query.all():
+        students[student.uid] = {
+            'id': student.id,
+            'name': student.name,
+            'email': student.email
+        }
     return students
 
-# Save attendance to CSV
+
 def mark_attendance(uid):
-    students = load_students()
+    """Mark attendance for a student"""
     now = datetime.now()
     date = now.strftime('%Y-%m-%d')
     time = now.strftime('%H:%M:%S')
 
-    if uid not in students:
+    # Find student by UID
+    student = Student.query.filter_by(uid=uid).first()
+    if not student:
         return False, "UID not found."
 
-    if not os.path.exists(ATTENDANCE_FILE):
-        with open(ATTENDANCE_FILE, 'w', newline='') as f:
-            writer = csv.writer(f)
-            writer.writerow(['Date', 'Time', 'UID', 'Name'])
+    # Check if already marked today
+    existing = Attendance.query.filter_by(
+        student_id=student.id,
+        date=date
+    ).first()
+    
+    if existing:
+        return False, "Attendance already marked for today."
 
-    with open(ATTENDANCE_FILE, 'r') as f:
-        existing_records = [row for row in csv.DictReader(f)]
-        for row in existing_records:
-            if row['UID'] == uid and row['Date'] == date:
-                return False, "Attendance already marked for today."
+    # Mark attendance
+    attendance = Attendance(
+        student_id=student.id,
+        date=date,
+        time=time
+    )
+    db.session.add(attendance)
+    db.session.commit()
 
-    with open(ATTENDANCE_FILE, 'a', newline='') as f:
-        writer = csv.writer(f)
-        writer.writerow([date, time, uid, students[uid]['name']])
+    # Send to Google Sheets
+    append_to_gsheet(f"{date} {time}", uid, student.name)
+    
+    return True, f"Attendance marked for {student.name}."
 
-    append_to_gsheet(f"{date} {time}", uid, students[uid]['name'])
-    return True, f"Attendance marked for {students[uid]['name']}."
+
+# ============ ROUTES ============
 
 # Home page (manual UID entry)
 @app.route('/', methods=['GET', 'POST'])
@@ -89,24 +189,31 @@ def index():
 
     # Live count logic
     today = datetime.now().strftime('%Y-%m-%d')
-    students = load_students()
-    present = get_present_uids(today)
+    total_students = Student.query.count()
+    present = len(get_present_uids(today))
 
-    return render_template('index.html', total=len(students), present=len(present))
+    return render_template('index.html', total=total_students, present=present)
+
 
 # Dashboard with grouped attendance logs
 @app.route('/dashboard')
 def dashboard():
-    if not os.path.exists(ATTENDANCE_FILE):
-        return render_template('dashboard.html', grouped_logs={})
-
     grouped_logs = defaultdict(list)
-    with open(ATTENDANCE_FILE, 'r') as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            grouped_logs[row['Date']].append(row)
-    grouped_logs = dict(sorted(grouped_logs.items(), reverse=True))
+    
+    # Query all attendance records
+    records = Attendance.query.order_by(Attendance.date.desc(), Attendance.time.desc()).all()
+    
+    for record in records:
+        grouped_logs[record.date].append({
+            'Date': record.date,
+            'Time': record.time,
+            'UID': record.student.uid,
+            'Name': record.student.name
+        })
+    
+    grouped_logs = dict(grouped_logs)
     return render_template('dashboard.html', grouped_logs=grouped_logs)
+
 
 # QR scanner AJAX POST endpoint
 @app.route('/mark_attendance_api', methods=['POST'])
@@ -119,24 +226,73 @@ def mark_attendance_api():
     success, message = mark_attendance(uid)
     return jsonify({'message': message}), (200 if success else 400)
 
+
+# Get current stats for real-time updates
+@app.route('/get_stats', methods=['GET'])
+def get_stats():
+    today = datetime.now().strftime('%Y-%m-%d')
+    total_students = Student.query.count()
+    present = len(get_present_uids(today))
+    
+    return jsonify({
+        'total': total_students,
+        'present': present,
+        'percentage': round((present / total_students * 100) if total_students else 0, 1)
+    })
+
+
+# Management page (Students, Sessions, Settings all in one)
+@app.route('/management')
+def management_page():
+    # Get students
+    students = []
+    for student in Student.query.all():
+        students.append((student.uid, student.name, student.email))
+    total_students = len(students)
+
+    # Get sessions (dates with attendance)
+    sessions = defaultdict(int)
+    records = Attendance.query.all()
+    for record in records:
+        sessions[record.date] += 1
+    sessions = dict(sorted(sessions.items(), reverse=True))
+
+    return render_template('management.html', 
+                         students=students, 
+                         total_students=total_students, 
+                         sessions=sessions)
+
+
+# Keep old routes for backward compatibility (redirect to new management page)
+@app.route('/students')
+def students_page():
+    return redirect('/management')
+
+@app.route('/sessions')
+def sessions_page():
+    return redirect('/management')
+
+@app.route('/settings')
+def settings_page():
+    return redirect('/management')
+
+
 # Absent report
 @app.route('/report')
 def report():
-    students = load_students()
     today = datetime.now().strftime('%Y-%m-%d')
-    present_uids = set()
+    
+    # Get all students
+    all_students = Student.query.all()
+    
+    # Get present students today
+    present_ids = {record.student_id for record in Attendance.query.filter_by(date=today).all()}
+    
+    # Calculate absentees
+    absentees = [(s.uid, s.name) for s in all_students if s.id not in present_ids]
 
-    if os.path.exists(ATTENDANCE_FILE):
-        with open(ATTENDANCE_FILE, 'r') as f:
-            reader = csv.DictReader(f)
-            for row in reader:
-                if row['Date'] == today:
-                    present_uids.add(row['UID'])
-
-    absentees = [(uid, data['name']) for uid, data in students.items() if uid not in present_uids]
-
-    total_students = len(students)
-    total_present = len(present_uids)
+    total_students = len(all_students)
+    total_present = len(present_ids)
     total_absent = len(absentees)
 
     return render_template(
@@ -148,20 +304,13 @@ def report():
         total_absent=total_absent
     )
 
+# Export report
 @app.route('/report/export/<string:file_type>')
 def export_report(file_type):
-    students = load_students()
     today = datetime.now().strftime('%Y-%m-%d')
-    present_uids = set()
-
-    if os.path.exists(ATTENDANCE_FILE):
-        with open(ATTENDANCE_FILE, 'r') as f:
-            reader = csv.DictReader(f)
-            for row in reader:
-                if row['Date'] == today:
-                    present_uids.add(row['UID'])
-
-    absentees = [(uid, data['name']) for uid, data in students.items() if uid not in present_uids]
+    all_students = Student.query.all()
+    present_ids = {record.student_id for record in Attendance.query.filter_by(date=today).all()}
+    absentees = [(s.uid, s.name) for s in all_students if s.id not in present_ids]
     df = pd.DataFrame(absentees, columns=['UID', 'Name'])
 
     if file_type == 'excel':
@@ -194,18 +343,10 @@ def export_report(file_type):
 # Send absent email alerts
 @app.route('/send-emails')
 def send_absent_emails():
-    students = load_students()
     today = datetime.now().strftime('%Y-%m-%d')
-    present_uids = set()
-
-    if os.path.exists(ATTENDANCE_FILE):
-        with open(ATTENDANCE_FILE, 'r') as f:
-            reader = csv.DictReader(f)
-            for row in reader:
-                if row['Date'] == today:
-                    present_uids.add(row['UID'])
-
-    absentees = [(uid, data['name'], data['email']) for uid, data in students.items() if uid not in present_uids]
+    all_students = Student.query.all()
+    present_ids = {record.student_id for record in Attendance.query.filter_by(date=today).all()}
+    absentees = [(s.uid, s.name, s.email) for s in all_students if s.id not in present_ids]
 
     for uid, name, email in absentees:
         if email:
@@ -219,29 +360,21 @@ def send_absent_emails():
 # Absentees view page
 @app.route('/absentees')
 def view_absentees():
-    students = load_students()
     today = datetime.now().strftime('%Y-%m-%d')
-    present_uids = set()
-
-    if os.path.exists(ATTENDANCE_FILE):
-        with open(ATTENDANCE_FILE, 'r') as f:
-            reader = csv.DictReader(f)
-            for row in reader:
-                if row['Date'] == today:
-                    present_uids.add(row['UID'])
-
-    absentees = [(uid, data['name']) for uid, data in students.items() if uid not in present_uids]
+    all_students = Student.query.all()
+    present_ids = {record.student_id for record in Attendance.query.filter_by(date=today).all()}
+    absentees = [(s.uid, s.name) for s in all_students if s.id not in present_ids]
     return render_template('absentees.html', date=today, absentees=absentees)
 
 @app.route('/export-absentees')
 def export_absentees():
-    students = load_students()
     today = datetime.now().strftime('%Y-%m-%d')
-    present_uids = get_present_uids(today)
+    all_students = Student.query.all()
+    present_ids = {record.student_id for record in Attendance.query.filter_by(date=today).all()}
 
     absentees = [
-        {'UID': uid, 'Name': data['name'], 'Email': data['email']}
-        for uid, data in students.items() if uid not in present_uids
+        {'UID': s.uid, 'Name': s.name, 'Email': s.email}
+        for s in all_students if s.id not in present_ids
     ]
 
     df = pd.DataFrame(absentees)
@@ -252,14 +385,14 @@ def export_absentees():
 
 @app.route('/download_qr_pdf')
 def download_qr_pdf():
-    students = load_students()
+    students = Student.query.all()
     pdf_path = "qr_codes.pdf"
     c = canvas.Canvas(pdf_path, pagesize=A4)
     width, height = A4
 
     x, y = 50, height - 100
-    for i, (uid, data) in enumerate(students.items()):
-        qr = qrcode.make(uid)
+    for i, student in enumerate(students):
+        qr = qrcode.make(student.uid)
         img_io = BytesIO()
         qr.save(img_io, format='PNG')
         img_io.seek(0)
@@ -268,7 +401,7 @@ def download_qr_pdf():
         img = ImageReader(img_io)
 
         c.drawImage(img, x, y, width=80, height=80)
-        c.drawString(x + 90, y + 30, f"{data['name']} ({uid})")
+        c.drawString(x + 90, y + 30, f"{student.name} ({student.uid})")
 
         y -= 100
         if y < 100:
@@ -278,27 +411,30 @@ def download_qr_pdf():
     c.save()
     return send_file(pdf_path, as_attachment=True)
 
-# Delete attendance logs older than 30 days
-@app.before_request
-def delete_old_logs():
-    if not os.path.exists(ATTENDANCE_FILE):
-        return
-
+# Delete attendance logs older than 30 days (cleanup on startup)
+def cleanup_old_records():
+    """Delete attendance records older than 30 days"""
     cutoff = datetime.now() - timedelta(days=30)
-    rows = []
+    Attendance.query.filter(Attendance.created_at < cutoff).delete()
+    db.session.commit()
 
-    with open(ATTENDANCE_FILE, 'r') as f:
-        reader = csv.DictReader(f)
-        headers = reader.fieldnames
-        for row in reader:
-            if datetime.strptime(row['Date'], '%Y-%m-%d') >= cutoff:
-                rows.append(row)
 
-    with open(ATTENDANCE_FILE, 'w', newline='') as f:
-        writer = csv.DictWriter(f, fieldnames=headers)
-        writer.writeheader()
-        writer.writerows(rows)
+# ============ APPLICATION STARTUP ============
 
-# Run the app
 if __name__ == '__main__':
-    app.run(debug=True)
+    with app.app_context():
+        # Initialize database
+        init_db()
+        
+        # Migrate CSV data if it hasn't been migrated yet
+        if Student.query.count() == 0 and os.path.exists('students.csv'):
+            print("\n📊 Migrating CSV data to database...")
+            migrate_csv_to_db()
+            print("✓ Migration complete!\n")
+        
+        # Cleanup old records
+        cleanup_old_records()
+    
+    # Run Flask app (debug only in development)
+    app.run(debug=not IS_PRODUCTION, port=int(os.getenv('PORT', 5000)))
+
