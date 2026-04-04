@@ -309,38 +309,49 @@ def report():
 # Export report
 @app.route('/report/export/<string:file_type>')
 def export_report(file_type):
-    today = datetime.now().strftime('%Y-%m-%d')
-    all_students = Student.query.all()
-    present_ids = {record.student_id for record in Attendance.query.filter_by(date=today).all()}
-    absentees = [(s.uid, s.name) for s in all_students if s.id not in present_ids]
-    df = pd.DataFrame(absentees, columns=['UID', 'Name'])
+    """Export absentees report - optimized for large datasets"""
+    try:
+        today = datetime.now().strftime('%Y-%m-%d')
+        all_students = Student.query.all()
+        present_ids = {record.student_id for record in Attendance.query.filter_by(date=today).all()}
+        absentees = [(s.uid, s.name) for s in all_students if s.id not in present_ids]
+        
+        # Limit to 500 records to prevent timeout
+        if len(absentees) > 500:
+            absentees = absentees[:500]
+            flash("Showing first 500 absentees only", "warning")
+        
+        df = pd.DataFrame(absentees, columns=['UID', 'Name'])
 
-    if file_type == 'excel':
-        output = BytesIO()
-        with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-            df.to_excel(writer, index=False, sheet_name='Absentees')
-        output.seek(0)
-        return send_file(output, download_name='absentees.xlsx', as_attachment=True)
+        if file_type == 'excel':
+            output = BytesIO()
+            with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+                df.to_excel(writer, index=False, sheet_name='Absentees')
+            output.seek(0)
+            return send_file(output, download_name='absentees.xlsx', as_attachment=True)
 
-    elif file_type == 'pdf':
-        buffer = BytesIO()
-        c = canvas.Canvas(buffer, pagesize=A4)
-        width, height = A4
-        c.setFont("Helvetica", 14)
-        c.drawString(50, height - 50, f"Absentees on {today}")
-        y = height - 80
-        for uid, name in absentees:
-            c.drawString(50, y, f"{uid} - {name}")
-            y -= 20
-            if y < 50:
-                c.showPage()
-                c.setFont("Helvetica", 14)
-                y = height - 50
-        c.save()
-        buffer.seek(0)
-        return send_file(buffer, download_name='absentees.pdf', as_attachment=True)
+        elif file_type == 'pdf':
+            buffer = BytesIO()
+            c = canvas.Canvas(buffer, pagesize=A4)
+            width, height = A4
+            c.setFont("Helvetica", 14)
+            c.drawString(50, height - 50, f"Absentees on {today}")
+            y = height - 80
+            for uid, name in absentees:
+                c.drawString(50, y, f"{uid} - {name}")
+                y -= 20
+                if y < 50:
+                    c.showPage()
+                    c.setFont("Helvetica", 14)
+                    y = height - 50
+            c.save()
+            buffer.seek(0)
+            return send_file(buffer, download_name='absentees.pdf', as_attachment=True)
 
-    return "Invalid file type", 400
+        return "Invalid file type", 400
+    except Exception as e:
+        flash(f"Error exporting report: {e}", "danger")
+        return redirect(url_for('report'))
 
 # Send absent email alerts
 @app.route('/send-emails')
@@ -384,20 +395,34 @@ def view_absentees():
 
 @app.route('/export-absentees')
 def export_absentees():
-    today = datetime.now().strftime('%Y-%m-%d')
-    all_students = Student.query.all()
-    present_ids = {record.student_id for record in Attendance.query.filter_by(date=today).all()}
+    """Export absentees to Excel file - optimized for large datasets"""
+    try:
+        today = datetime.now().strftime('%Y-%m-%d')
+        all_students = Student.query.all()
+        present_ids = {record.student_id for record in Attendance.query.filter_by(date=today).all()}
 
-    absentees = [
-        {'UID': s.uid, 'Name': s.name, 'Email': s.email}
-        for s in all_students if s.id not in present_ids
-    ]
+        absentees = [
+            {'UID': s.uid, 'Name': s.name, 'Email': s.email}
+            for s in all_students if s.id not in present_ids
+        ]
+        
+        # Limit to 500 records to prevent timeout
+        if len(absentees) > 500:
+            absentees = absentees[:500]
+            flash("Showing first 500 absentees only", "warning")
 
-    df = pd.DataFrame(absentees)
-    file_path = f"absentees_{today}.xlsx"
-    df.to_excel(file_path, index=False)
+        df = pd.DataFrame(absentees)
+        
+        # Use BytesIO instead of temp file for better performance
+        output = BytesIO()
+        with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+            df.to_excel(writer, index=False, sheet_name='Absentees')
+        output.seek(0)
 
-    return send_file(file_path, as_attachment=True)
+        return send_file(output, download_name=f'absentees_{today}.xlsx', as_attachment=True)
+    except Exception as e:
+        flash(f"Error exporting absentees: {e}", "danger")
+        return redirect(url_for('report'))
 
 @app.route('/download_qr_pdf')
 def download_qr_pdf():
