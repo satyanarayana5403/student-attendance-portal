@@ -12,6 +12,8 @@ from reportlab.lib.utils import ImageReader
 import qrcode
 import csv
 import os
+import threading
+import time
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -343,18 +345,32 @@ def export_report(file_type):
 # Send absent email alerts
 @app.route('/send-emails')
 def send_absent_emails():
+    """Send absence notification emails asynchronously"""
     today = datetime.now().strftime('%Y-%m-%d')
     all_students = Student.query.all()
     present_ids = {record.student_id for record in Attendance.query.filter_by(date=today).all()}
     absentees = [(s.uid, s.name, s.email) for s in all_students if s.id not in present_ids]
-
-    for uid, name, email in absentees:
-        if email:
-            subject = f"Absent Alert: {name}"
-            body = f"Dear Parent,\n\nThis is to inform you that {name} was absent on {today}.\n\nRegards,\nAttendance System"
-            send_email(email, subject, body)
-
-    flash(f"Email notifications sent to {len(absentees)} absentee(s).", "success")
+    
+    # Count absentees with email
+    email_count = sum(1 for _, _, email in absentees if email)
+    
+    # Send emails in background thread (don't wait)
+    def send_emails_background():
+        for uid, name, email in absentees:
+            if email:
+                try:
+                    subject = f"Absent Alert: {name}"
+                    body = f"Dear Parent,\n\nThis is to inform you that {name} was absent on {today}.\n\nRegards,\nAttendance System"
+                    send_email(email, subject, body)
+                except Exception as e:
+                    print(f"⚠️  Failed to send email to {email}: {e}")
+    
+    # Start background thread with daemon=True so it won't block shutdown
+    thread = threading.Thread(target=send_emails_background, daemon=True)
+    thread.start()
+    
+    # Return immediately without waiting
+    flash(f"Sending email notifications to {email_count} absentee(s) in background...", "info")
     return redirect(url_for('report'))
 
 # Absentees view page
