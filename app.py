@@ -419,22 +419,37 @@ def cleanup_old_records():
     db.session.commit()
 
 
+
+
 # ============ APPLICATION STARTUP ============
 
+# Database initialization flag
+_db_initialized = False
+
+@app.before_request
+def initialize_database():
+    """Initialize database on first request (works with gunicorn)"""
+    global _db_initialized
+    if not _db_initialized:
+        try:
+            with app.app_context():
+                # Create all tables
+                init_db()
+                
+                # Migrate CSV data if it hasn't been migrated yet
+                if Student.query.count() == 0 and os.path.exists('students.csv'):
+                    print("\n?? Migrating CSV data to database...")
+                    migrate_csv_to_db()
+                    print("? Migration complete!\n")
+                
+                # Cleanup old records
+                cleanup_old_records()
+                
+                _db_initialized = True
+        except Exception as e:
+            print(f"Database initialization error: {e}")
+
+
 if __name__ == '__main__':
-    with app.app_context():
-        # Initialize database
-        init_db()
-        
-        # Migrate CSV data if it hasn't been migrated yet
-        if Student.query.count() == 0 and os.path.exists('students.csv'):
-            print("\n📊 Migrating CSV data to database...")
-            migrate_csv_to_db()
-            print("✓ Migration complete!\n")
-        
-        # Cleanup old records
-        cleanup_old_records()
-    
     # Run Flask app (debug only in development)
     app.run(debug=not IS_PRODUCTION, port=int(os.getenv('PORT', 5000)))
-
