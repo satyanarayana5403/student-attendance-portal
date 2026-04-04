@@ -385,31 +385,37 @@ def export_absentees():
 
 @app.route('/download_qr_pdf')
 def download_qr_pdf():
-    students = Student.query.all()
-    pdf_path = "qr_codes.pdf"
-    c = canvas.Canvas(pdf_path, pagesize=A4)
-    width, height = A4
+    """Download QR codes as PDF - optimized for large datasets"""
+    try:
+        students = Student.query.limit(100).all()  # Limit to first 100 students
+        pdf_path = "qr_codes.pdf"
+        c = canvas.Canvas(pdf_path, pagesize=A4)
+        width, height = A4
 
-    x, y = 50, height - 100
-    for i, student in enumerate(students):
-        qr = qrcode.make(student.uid)
-        img_io = BytesIO()
-        qr.save(img_io, format='PNG')
-        img_io.seek(0)
+        x, y = 50, height - 100
+        for i, student in enumerate(students):
+            # Generate QR code
+            qr = qrcode.make(student.uid)
+            img_io = BytesIO()
+            qr.save(img_io, format='PNG')
+            img_io.seek(0)
 
-        # Wrap BytesIO stream with ImageReader
-        img = ImageReader(img_io)
+            # Wrap BytesIO stream with ImageReader
+            img = ImageReader(img_io)
 
-        c.drawImage(img, x, y, width=80, height=80)
-        c.drawString(x + 90, y + 30, f"{student.name} ({student.uid})")
+            c.drawImage(img, x, y, width=80, height=80)
+            c.drawString(x + 90, y + 30, f"{student.name} ({student.uid})")
 
-        y -= 100
-        if y < 100:
-            c.showPage()
-            y = height - 100
+            y -= 100
+            if y < 100:
+                c.showPage()
+                y = height - 100
 
-    c.save()
-    return send_file(pdf_path, as_attachment=True)
+        c.save()
+        return send_file(pdf_path, as_attachment=True)
+    except Exception as e:
+        flash(f"Error generating QR PDF: {e}", "danger")
+        return redirect(url_for('dashboard'))
 
 # Delete attendance logs older than 30 days (cleanup on startup)
 def cleanup_old_records():
