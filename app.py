@@ -45,7 +45,7 @@ DB_URL = os.getenv('DATABASE_URL')
 if DB_URL:
     if DB_URL.startswith('postgresql://'):
         DB_URL = DB_URL.replace('postgresql://', 'postgresql+psycopg2://', 1)
-    elif DB_URL.startswith('mysql://'):
+    elif DB_URL.startswith('mysql://') and 'pymysql' not in DB_URL:
         DB_URL = DB_URL.replace('mysql://', 'mysql+pymysql://', 1)
 else:
     # Strict fallback to MySQL if no URL provided
@@ -54,10 +54,19 @@ else:
 
 app.config['SQLALCHEMY_DATABASE_URI'] = DB_URL
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+
+# Configure engine options with SSL support for cloud providers like Aiven
+engine_options = {
     "pool_pre_ping": True,
     "pool_recycle": 3600,
 }
+
+# If using Aiven or explicit SSL requirement, enable SSL in connect_args
+if DB_URL and ('aivencloud.com' in DB_URL or 'ssl-mode=REQUIRED' in DB_URL):
+    engine_options["connect_args"] = {"ssl": {}}
+    print("[INFO] SSL enabled for Database connection")
+
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = engine_options
 
 db = SQLAlchemy(app)
 csrf = CSRFProtect(app)
