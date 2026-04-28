@@ -1,0 +1,463 @@
+{% extends "base.html" %}
+
+{% block title %}Student Portal — Nexus{% endblock %}
+{% block loader_text %}Loading your stats...{% endblock %}
+
+{% block extra_css %}
+    body { display: flex; min-height: 100vh; }
+
+    .sidebar-student {
+        width: 280px;
+        background: var(--surface);
+        border-right: 1px solid var(--border);
+        padding: 30px 24px;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .main-content { flex: 1; padding: 40px; overflow-y: auto; }
+    .main-content > * { animation: fadeUp 0.35s ease both; }
+    .main-content > *:nth-child(1) { animation-delay: 0.05s; }
+    .main-content > *:nth-child(2) { animation-delay: 0.1s; }
+    .main-content > *:nth-child(3) { animation-delay: 0.15s; }
+    .main-content > *:nth-child(4) { animation-delay: 0.2s; }
+    .main-content > *:nth-child(5) { animation-delay: 0.25s; }
+
+    .page-header { margin-bottom: 28px; }
+    .page-header h1 { font-size: 22px; font-weight: 600; }
+
+    .progress-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+    .progress-pct { font-size: 36px; font-weight: 700; letter-spacing: -0.02em; }
+    .progress-labels { display: flex; justify-content: space-between; font-size: 11px; font-family: var(--mono); color: var(--text-3); }
+    .status-tag {
+        display: inline-flex; align-items: center; gap: 6px;
+        padding: 6px 14px; border-radius: 6px;
+        font-size: 13px; font-weight: 500;
+    }
+    .status-tag.good { background: var(--green-glow); color: var(--green); border: 1px solid rgba(16,185,129,0.12); }
+    .status-tag.bad { background: var(--red-glow); color: var(--red); border: 1px solid rgba(239,68,68,0.12); }
+
+    .pw-change-link {
+        display: block; padding: 10px 14px;
+        border-radius: var(--radius-sm);
+        color: var(--text-2); text-decoration: none;
+        font-size: 14px; margin-bottom: 4px;
+        transition: all var(--transition); cursor: pointer;
+    }
+    .pw-change-link:hover { background: var(--surface-2); color: var(--text); }
+
+    /* Calendar Widget */
+    .calendar {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 24px;
+        margin-bottom: 24px;
+    }
+    .calendar-header {
+        display: flex; justify-content: space-between; align-items: center;
+        margin-bottom: 20px;
+    }
+    .calendar-title { font-size: 15px; font-weight: 600; }
+    .calendar-legend {
+        display: flex; gap: 16px; font-size: 11px; font-family: var(--mono);
+    }
+    .legend-item { display: flex; align-items: center; gap: 6px; }
+    .legend-dot {
+        width: 10px; height: 10px; border-radius: 3px;
+    }
+    .legend-dot.present { background: var(--green); }
+    .legend-dot.absent { background: var(--red); }
+    .legend-dot.empty { background: var(--surface-2); border: 1px solid var(--border); }
+
+    .calendar-grid {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 4px;
+    }
+    .cal-day-header {
+        text-align: center;
+        font-size: 10px;
+        font-family: var(--mono);
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: var(--text-3);
+        padding: 8px 0;
+    }
+    .cal-day {
+        aspect-ratio: 1;
+        display: flex; align-items: center; justify-content: center;
+        border-radius: 6px;
+        font-size: 12px;
+        font-family: var(--mono);
+        color: var(--text-3);
+        background: var(--surface-2);
+        border: 1px solid transparent;
+        transition: all var(--transition);
+        position: relative;
+    }
+    .cal-day.empty { background: none; }
+    .cal-day.present {
+        background: var(--green-glow);
+        color: var(--green);
+        border-color: rgba(16,185,129,0.2);
+        font-weight: 600;
+    }
+    .cal-day.absent {
+        background: var(--red-glow);
+        color: var(--red);
+        border-color: rgba(239,68,68,0.2);
+        font-weight: 600;
+    }
+    .cal-day.today {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 2px var(--accent-glow);
+    }
+    .cal-day:not(.empty):hover {
+        transform: scale(1.1);
+    }
+
+    @media (max-width: 768px) {
+        body { flex-direction: column; }
+        .sidebar-student { width: 100%; padding: 20px; flex-direction: row; align-items: center; gap: 20px; }
+        .profile-section { margin-bottom: 0; }
+        .profile-pic { width: 50px; height: 50px; }
+        .main-content { padding: 20px; }
+        .stats-row { grid-template-columns: 1fr; }
+    }
+{% endblock %}
+
+{% block body %}
+    <aside class="sidebar-student">
+        <div class="profile-section">
+            <img src="{{ url_for('static', filename='uploads/profiles/' + prof.profile_pic) }}" class="profile-pic" alt="Profile">
+            <div class="profile-name">{{ prof.name }}</div>
+            <div class="profile-id">{{ prof.uid }}</div>
+            <form action="{{ url_for('upload_profile') }}" method="POST" enctype="multipart/form-data">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="file" name="file" style="display:none" id="profileInput" accept="image/*" onchange="this.form.submit()">
+                <label for="profileInput" class="profile-upload">Update Photo</label>
+            </form>
+        </div>
+        <div style="margin-top: auto; display: flex; flex-direction: column; gap: 4px;">
+            <a class="pw-change-link" onclick="document.getElementById('pwModal').classList.add('show')">🔑 Change Password</a>
+            <a class="pw-change-link" onclick="openSupportModal()">🎫 Support</a>
+            <a class="pw-change-link dark-mode-btn" onclick="toggleTheme()" id="themeToggleBtn">☀️ Light Mode</a>
+            <a href="/logout" class="nav-item danger">⏻ Logout</a>
+        </div>
+    </aside>
+
+    <div class="main-content">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="flash flash-{{ category }}">{{ message }}<button class="flash-close">&times;</button></div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+
+        <div class="page-header">
+            <h1>My Attendance</h1>
+        </div>
+
+        <div class="stats-row">
+            <div class="stat-card indigo">
+                <div class="stat-label">Present Days</div>
+                <div class="stat-value">{{ present_count }}</div>
+                <div class="stat-sub">out of {{ total_sessions }} total sessions</div>
+            </div>
+            <div class="stat-card {{ 'green' if percentage >= 75 else 'amber' }}">
+                <div class="stat-label">Absent Days</div>
+                <div class="stat-value">{{ absent_dates|length }}</div>
+                <div class="stat-sub">{{ '✓ Good standing' if percentage >= 75 else '⚠ Needs improvement' }}</div>
+            </div>
+        </div>
+
+        <!-- Overall Progress -->
+        <div class="card">
+            <div class="progress-header">
+                <div>
+                    <div class="card-title" style="margin-bottom: 4px;">Overall Attendance</div>
+                    <div style="font-size: 13px; color: var(--text-3);">Minimum required: 75%</div>
+                </div>
+                <div style="text-align: right;">
+                    <div class="progress-pct">{{ percentage }}%</div>
+                    {% if percentage >= 75 %}
+                        <div class="status-tag good">✓ On Track</div>
+                    {% else %}
+                        <div class="status-tag bad">⚠ Low Attendance</div>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="progress-track">
+                <div class="progress-fill {{ 'good' if percentage >= 75 else ('warn' if percentage >= 50 else 'bad') }}" id="progressBar" style="width: 0%"></div>
+            </div>
+            <div class="progress-labels">
+                <span>0%</span>
+                <span>75% minimum</span>
+                <span>100%</span>
+            </div>
+        </div>
+
+        <!-- Calendar View -->
+        <div class="calendar" id="calendarWidget">
+            <div class="calendar-header">
+                <div class="calendar-title">📅 Monthly Calendar</div>
+                <div class="calendar-legend">
+                    <div class="legend-item"><div class="legend-dot present"></div><span style="color:var(--text-2)">Present</span></div>
+                    <div class="legend-item"><div class="legend-dot absent"></div><span style="color:var(--text-2)">Absent</span></div>
+                    <div class="legend-item"><div class="legend-dot empty"></div><span style="color:var(--text-2)">No Session</span></div>
+                </div>
+            </div>
+            <div class="calendar-grid" id="calGrid">
+                <!-- Filled by JS -->
+            </div>
+        </div>
+
+        <!-- Attendance Log -->
+        <div class="card" style="padding: 0; overflow: hidden;">
+            <div style="padding: 18px 24px; border-bottom: 1px solid var(--border);">
+                <div class="card-title" style="margin-bottom: 0;">Attendance Log ({{ records|length }} records)</div>
+            </div>
+            <table class="table">
+                <thead>
+                    <tr><th>Date</th><th>Time</th><th>Status</th></tr>
+                </thead>
+                <tbody>
+                    {% for record in records %}
+                    <tr>
+                        <td style="font-family: var(--mono); font-size: 12px;">{{ record.date }}</td>
+                        <td style="font-family: var(--mono); font-size: 12px; color: var(--text-3);">{{ record.time }}</td>
+                        <td><span class="badge badge-green">Present</span></td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="3" class="empty-state">No attendance records found.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Absent Days -->
+        {% if absent_dates %}
+        <div class="card" style="padding: 0; overflow: hidden;">
+            <div style="padding: 18px 24px; border-bottom: 1px solid var(--border);">
+                <div class="card-title" style="margin-bottom: 0;">Absent Days ({{ absent_dates|length }})</div>
+            </div>
+            <table class="table">
+                <thead><tr><th>Date</th><th>Status</th></tr></thead>
+                <tbody>
+                    {% for date in absent_dates %}
+                    <tr>
+                        <td style="font-family: var(--mono); font-size: 12px;">{{ date }}</td>
+                        <td><span class="badge badge-red">Absent</span></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Password Change Modal -->
+    <div class="modal-overlay" id="pwModal">
+        <div class="modal">
+            <button class="modal-close" onclick="document.getElementById('pwModal').classList.remove('show')">×</button>
+            <div class="modal-title">Change Password</div>
+            <form action="{{ url_for('change_password') }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="form-group">
+                    <label>Current Password</label>
+                    <input type="password" name="current_password" required>
+                </div>
+                <div class="form-group">
+                    <label>New Password</label>
+                    <input type="password" name="new_password" required placeholder="Min 6 characters">
+                </div>
+                <div class="form-group">
+                    <label>Confirm New Password</label>
+                    <input type="password" name="confirm_password" required>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width:100%">Update Password</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Support Modal -->
+    <div class="modal-overlay" id="supportModal">
+        <div class="modal" style="max-width: 600px;">
+            <button class="modal-close" onclick="document.getElementById('supportModal').classList.remove('show')">×</button>
+            <div class="modal-title">Customer Support</div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+                <!-- New Ticket Form -->
+                <div>
+                    <div style="font-weight: 600; font-size: 14px; margin-bottom: 12px; border-bottom: 1px solid var(--border); padding-bottom: 8px;">New Ticket</div>
+                    <form id="supportForm">
+                        <div class="form-group">
+                            <label>Subject</label>
+                            <input type="text" id="supSubject" required placeholder="Brief description of your issue">
+                        </div>
+                        <div class="form-group">
+                            <label>Message</label>
+                            <textarea id="supMessage" required placeholder="Describe your problem..." rows="4" style="width: 100%; padding: 12px; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text); font-family: var(--sans); resize: none;"></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary" style="width:100%" id="supSubmitBtn">Submit Ticket</button>
+                    </form>
+                    <div id="supStatusMsg" style="margin-top: 12px; font-size: 13px; display: none;"></div>
+                </div>
+                
+                <!-- My Tickets -->
+                <div>
+                    <div style="font-weight: 600; font-size: 14px; margin-bottom: 12px; border-bottom: 1px solid var(--border); padding-bottom: 8px;">My Open Tickets</div>
+                    <div id="supTicketList" style="max-height: 250px; overflow-y: auto;">
+                        <div class="empty-state" style="padding: 20px 0;">Loading...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+    // Animate progress bar
+    setTimeout(() => {
+        document.getElementById('progressBar').style.width = '{{ percentage }}%';
+    }, 300);
+
+    // Close modal on backdrop click
+    document.getElementById('pwModal').addEventListener('click', function(e) {
+        if (e.target === this) this.classList.remove('show');
+    });
+
+    // Calendar Widget
+    const presentDates = new Set({{ month_present|tojson }});
+    const absentDates = new Set({{ month_absent|tojson }});
+    const currentMonth = '{{ current_month }}';
+    const today = new Date().toISOString().slice(0, 10);
+
+    function buildCalendar() {
+        const grid = document.getElementById('calGrid');
+        if (!grid) return;
+
+        const [year, month] = currentMonth.split('-').map(Number);
+        const firstDay = new Date(year, month - 1, 1);
+        const lastDay = new Date(year, month, 0);
+        const daysInMonth = lastDay.getDate();
+        const startDow = firstDay.getDay(); // 0=Sun
+
+        const dayNames = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+        let html = '';
+
+        // Day headers
+        dayNames.forEach(d => {
+            html += `<div class="cal-day-header">${d}</div>`;
+        });
+
+        // Empty cells before first day
+        for (let i = 0; i < startDow; i++) {
+            html += '<div class="cal-day empty"></div>';
+        }
+
+        // Days
+        for (let d = 1; d <= daysInMonth; d++) {
+            const dateStr = `${year}-${String(month).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+            let cls = 'cal-day';
+            if (presentDates.has(dateStr)) cls += ' present';
+            else if (absentDates.has(dateStr)) cls += ' absent';
+            if (dateStr === today) cls += ' today';
+            html += `<div class="${cls}" title="${dateStr}">${d}</div>`;
+        }
+
+        grid.innerHTML = html;
+    }
+
+    buildCalendar();
+
+    // Support System
+    async function loadTickets() {
+        const list = document.getElementById('supTicketList');
+        try {
+            const res = await fetch('/support');
+            const data = await res.json();
+            if (data.length === 0) {
+                list.innerHTML = '<div class="empty-state" style="padding: 20px 0;">No active tickets.</div>';
+                return;
+            }
+            let html = '';
+            data.forEach(t => {
+                const statusColor = t.status === 'resolved' ? 'var(--green)' : t.status === 'in_progress' ? 'var(--amber)' : 'var(--text-2)';
+                html += `
+                    <div style="background: var(--surface-2); border: 1px solid var(--border); border-radius: 6px; padding: 12px; margin-bottom: 10px;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                            <strong style="font-size: 13px;">${t.subject}</strong>
+                            <span style="font-size: 10px; padding: 2px 6px; border-radius: 4px; background: rgba(255,255,255,0.05); color: ${statusColor}; text-transform: uppercase;">${t.status.replace('_', ' ')}</span>
+                        </div>
+                        <div style="font-size: 12px; color: var(--text-3); margin-bottom: 8px;">${t.created_at}</div>
+                        ${t.admin_reply ? `<div style="font-size: 12px; background: var(--bg); padding: 8px; border-left: 2px solid var(--accent); border-radius: 4px;"><strong>Admin:</strong> ${t.admin_reply}</div>` : ''}
+                    </div>
+                `;
+            });
+            list.innerHTML = html;
+        } catch (e) {
+            list.innerHTML = '<div style="color: var(--red); font-size: 12px;">Failed to load tickets.</div>';
+        }
+    }
+
+    function openSupportModal() {
+        document.getElementById('supportModal').classList.add('show');
+        loadTickets();
+    }
+
+    document.getElementById('supportModal').addEventListener('click', function(e) {
+        if (e.target === this) this.classList.remove('show');
+    });
+
+    document.getElementById('supportForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('supSubmitBtn');
+        const status = document.getElementById('supStatusMsg');
+        btn.disabled = true;
+        btn.textContent = 'Submitting...';
+        // ... (rest remains below)
+    // Initialize theme button text
+    window.addEventListener('load', () => {
+        const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+        const btns = document.querySelectorAll('.dark-mode-btn');
+        btns.forEach(btn => btn.textContent = isLight ? '🌙 Dark Mode' : '☀️ Light Mode');
+    });
+        
+        try {
+            const res = await fetch('/support/new', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify({
+                    subject: document.getElementById('supSubject').value,
+                    message: document.getElementById('supMessage').value
+                })
+            });
+            const data = await res.json();
+            status.style.display = 'block';
+            if (data.success) {
+                status.style.color = 'var(--green)';
+                status.textContent = '✓ Ticket submitted successfully!';
+                document.getElementById('supportForm').reset();
+                loadTickets();
+                setTimeout(() => { status.style.display = 'none'; }, 3000);
+            } else {
+                status.style.color = 'var(--red)';
+                status.textContent = '✗ ' + (data.message || 'Submission failed');
+            }
+        } catch (err) {
+            status.style.display = 'block';
+            status.style.color = 'var(--red)';
+            status.textContent = '✗ Network error occurred';
+        } finally {
+            btn.disabled = false;
+            btn.textContent = 'Submit Ticket';
+        }
+    });
+
+{% endblock %}

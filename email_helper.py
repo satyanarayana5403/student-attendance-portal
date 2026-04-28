@@ -1,13 +1,21 @@
+import os
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import socket
+from dotenv import load_dotenv
 
-GMAIL_USER = 'venurao049@gmail.com'
-GMAIL_PASS = 'kniv apph fccw erun'  # App Password
+load_dotenv()
+
+GMAIL_USER = os.getenv('GMAIL_USER', '')
+GMAIL_PASS = os.getenv('GMAIL_PASS', '')
 
 def send_email(to_email, subject, body):
     """Send email with timeout protection"""
+    if not GMAIL_USER or not GMAIL_PASS:
+        print(f"⚠️  Email credentials not configured in .env. Simulating email to {to_email}")
+        return True
+
     msg = MIMEMultipart()
     msg['From'] = GMAIL_USER
     msg['To'] = to_email

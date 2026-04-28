@@ -9,41 +9,65 @@ A modern, efficient student attendance management system built with Flask and SQ
 ## Features
 
 ### ✨ Core Features
-- **QR Code Scanning** - Real-time attendance marking via QR codes
-- **Manual Entry** - UID-based manual attendance input
+- **QR Code Scanning** - Real-time attendance marking via QR codes using device cameras
+- **Manual Entry** - UID-based manual attendance input fallback
 - **Live Stats** - Real-time attendance statistics with auto-refresh
-- **Dashboard** - Comprehensive attendance history with date grouping
-- **Absent Reports** - Identify absentees and export to Excel/PDF
-- **Email Alerts** - Notify parents of absences
-- **Google Sheets Integration** - Auto-sync attendance to Google Sheets
+- **Dashboards** - Role-based views for Admins, Teachers, and Students
+- **Absent Reports** - Identify absentees and export logs to Excel/CSV
+- **Email Alerts** - One-click automated absence notifications to parents via SMTP
+- **Google Sheets Integration** - Auto-sync attendance directly to Google Sheets
 
 ### 💾 Backend
-- **SQLite Database** - Efficient indexed queries
-- **SQLAlchemy ORM** - Type-safe database operations
-- **Auto-migration** - CSV data automatically migrates to database
-- **Data Cleanup** - Auto-delete records older than 30 days
+- **Database agnostic** - Supports SQLite (default) and MySQL/PostgreSQL
+- **SQLAlchemy ORM** - Type-safe, secure database operations
+- **Auto-migration** - Legacy CSV data automatically migrates to the database on first run
+- **RBAC Authentication** - Secure password hashing and role-based access control
 
 ### 🎨 Frontend
-- **Modern UI** - Dark theme with glassmorphism design
-- **Responsive** - Works on desktop, tablet, and mobile
-- **Real-time Updates** - Stats refresh every 10 seconds
-- **Tab Navigation** - Persistent tabs with localStorage
+- **Modern UI** - Dark theme with beautiful glassmorphism design
+- **Responsive** - Works seamlessly on desktop, tablet, and mobile
+- **Real-time Updates** - Dashboard stats auto-refresh every 10 seconds via API
+- **Dynamic State** - QR scanners and settings toggle without requiring page reloads
 
 ### 📊 Management Panel
-- **Students Tab** - View all enrolled students with emails
-- **Sessions Tab** - Track attendance sessions by date
-- **Settings Tab** - Configure app preferences
-- **Persistent State** - Settings saved to browser storage
+- **Users Tab** - View and manage all enrolled students and teachers
+- **Sessions Tab** - Track global attendance sessions by date
+- **Support Tab** - Built-in customer support ticketing system
+- **Settings Tab** - Configure app preferences (saved directly to DB)
+
+## 🏗️ System Architecture
+
+```mermaid
+graph TD
+    classDef client fill:#2D3748,stroke:#4A5568,stroke-width:2px,color:#fff
+    classDef frontend fill:#3182CE,stroke:#2B6CB0,stroke-width:2px,color:#fff
+    classDef backend fill:#38A169,stroke:#2F855A,stroke-width:2px,color:#fff
+    classDef database fill:#D69E2E,stroke:#B7791F,stroke-width:2px,color:#fff
+    classDef external fill:#805AD5,stroke:#6B46C1,stroke-width:2px,color:#fff
+    
+    Client(Teacher / Student Device) ::: client
+    UI(Frontend Dashboards & jsQR Scanner) ::: frontend
+    API(Flask Backend Core & Routing) ::: backend
+    DB[(SQLite / MySQL Database)] ::: database
+    ExtSMTP(SMTP Mail Server) ::: external
+    ExtSheet(Google Sheets API) ::: external
+    
+    Client -->|Scans QR / Clicks| UI
+    UI -->|AJAX POST / Fetch JSON| API
+    API <-->|Read / Write Data| DB
+    API -->|Dispatch Warning Emails| ExtSMTP
+    API -->|Sync Live Logs| ExtSheet
+```
 
 ## Technology Stack
 
 | Component | Technology |
 |-----------|-----------|
-| Backend | Flask 3.0.3 |
-| Database | SQLite + SQLAlchemy |
-| Frontend | HTML5, CSS3, JavaScript (Vanilla) |
-| Server | Gunicorn |
-| Hosting | Render.com (Free) |
+| Backend | Python 3, Flask |
+| Database | SQLite / MySQL + SQLAlchemy |
+| Frontend | HTML5, CSS3, JavaScript (Vanilla), Jinja2 |
+| Visualization | Chart.js |
+| Hardware API | jsQR (Camera processing) |
 
 ## Installation & Setup
 
@@ -96,41 +120,49 @@ Your app will be live at: `https://nexus-attendance.onrender.com`
 
 ```
 student-attendance-portal/
-├── app.py                  # Main Flask application
+├── app.py                  # Main Flask application & routes
 ├── requirements.txt        # Python dependencies
 ├── Procfile               # Render deployment config
-├── render.yaml            # Render web service config
 ├── runtime.txt            # Python version specification
 │
 ├── templates/             # HTML templates
-│   ├── index.html         # Mark attendance page
-│   ├── dashboard.html     # Attendance history
-│   ├── report.html        # Absent report
-│   ├── management.html    # Admin panel
-│   └── absentees.html     # Absentees list
+│   ├── base.html          # Master layout
+│   ├── login.html         # Authentication interface
+│   ├── student_dashboard.html # Student attendance view
+│   ├── teacher_dashboard.html # Teacher QR scanning interface
+│   └── management.html    # Admin management panel
 │
-├── email_helper.py        # Email notification service
-├── gsheet_helper.py       # Google Sheets integration
-├── cron_task.py           # Scheduled tasks
+├── email_helper.py        # SMTP Email notification service
+├── gsheet_helper.py       # Google Sheets sync integration
+├── absent_notifier.py     # Absentee calculation logic
 │
-├── students.csv           # Student data (auto-migrated)
-├── attendance_log.csv     # Attendance history (auto-migrated)
-├── attendance.db          # SQLite database (auto-created)
+├── students.csv           # Legacy student data (auto-migrated)
+├── attendance_log.csv     # Legacy attendance history
+├── attendance.db          # SQLite database (auto-created on run)
 │
 └── credentials.json       # Google API credentials
 ```
 
-## Database Schema
+## Database Schema (Core Tables)
+
+### Users & Role-Based Auth
+```sql
+CREATE TABLE users (
+    id INTEGER PRIMARY KEY,
+    username VARCHAR(100) UNIQUE NOT NULL,
+    password_hash VARCHAR(256) NOT NULL,
+    role VARCHAR(20) NOT NULL -- admin, teacher, student
+);
+```
 
 ### Students Table
 ```sql
 CREATE TABLE students (
     id INTEGER PRIMARY KEY,
+    user_id INTEGER UNIQUE, -- Links to users table
     uid VARCHAR(100) UNIQUE NOT NULL,
     name VARCHAR(255) NOT NULL,
-    email VARCHAR(255),
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    INDEX(uid)
+    email VARCHAR(255)
 );
 ```
 
@@ -141,11 +173,8 @@ CREATE TABLE attendance (
     student_id INTEGER NOT NULL,
     date VARCHAR(10) NOT NULL,
     time VARCHAR(8) NOT NULL,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY(student_id) REFERENCES students(id),
-    UNIQUE(student_id, date),
-    INDEX(date),
-    INDEX(student_id)
+    UNIQUE(student_id, date)
 );
 ```
 
@@ -153,14 +182,14 @@ CREATE TABLE attendance (
 
 | Route | Method | Purpose |
 |-------|--------|---------|
-| `/` | GET, POST | Home - Mark attendance |
-| `/dashboard` | GET | Attendance history |
-| `/report` | GET | Absent students report |
-| `/management` | GET | Admin panel (Students, Sessions, Settings) |
-| `/mark_attendance_api` | POST | API for marking attendance |
-| `/get_stats` | GET | Real-time statistics |
-| `/report/export/<type>` | GET | Export report (excel/pdf) |
-| `/send-emails` | GET | Send absence notifications |
+| `/login` | GET, POST | User authentication & role routing |
+| `/student/dashboard` | GET | Student attendance calendar & history |
+| `/teacher/dashboard` | GET | Teacher QR scanner & class stats |
+| `/management` | GET | Admin panel (Users, Settings, Reports) |
+| `/mark_attendance_api` | POST | AJAX endpoint for JS QR scanner |
+| `/api/stats` | GET | Real-time widget statistics |
+| `/export/<type>` | GET | Export raw logs (csv/excel) |
+| `/send_absent_notifications`| POST | Dispatch automated absence emails |
 
 ## Configuration
 
@@ -169,8 +198,9 @@ CREATE TABLE attendance (
 ```bash
 FLASK_ENV=production          # production or development
 SECRET_KEY=your-secret-key    # Random secret key
-DATABASE_URL=sqlite:///attendance.db  # Database connection
-PORT=5000                     # Port number
+DATABASE_URL=sqlite:///attendance.db  # DB connection string
+GMAIL_USER=your_email@gmail.com # Sender email
+GMAIL_PASS=your_app_password  # Sender app password
 ```
 
 ### For Google Sheets Integration
@@ -183,19 +213,19 @@ PORT=5000                     # Port number
 ## Performance Optimizations
 
 ✅ **Database Indexes**
-- Student UID (fast lookups)
-- Attendance date (fast filtering)
-- Student ID (fast joins)
+- Student UID (fast lookups during QR scans)
+- Attendance date (fast filtering for charts)
+- Student ID (fast relational joins)
 
 ✅ **Query Efficiency**
-- Direct database queries (no CSV reads)
 - Atomic transactions
 - Automatic connection pooling
+- Prevents double-marking natively via SQL constraints
 
 ✅ **Frontend**
-- Lazy tab loading
-- LocalStorage for settings
-- Auto-refresh (10 seconds)
+- DOM manipulation instead of page reloads for settings
+- LocalStorage for UI theme preferences
+- AJAX polling for dashboard data freshness
 
 ## Troubleshooting
 
@@ -205,16 +235,16 @@ pip install -r requirements.txt
 ```
 
 ### Database Lock Issues
-- SQLite shouldn't have issues with small user count
-- For production use, upgrade to PostgreSQL on Render
+- SQLite shouldn't have issues with small user counts.
+- For production use with multiple simultaneous QR scans, change `DATABASE_URL` to PostgreSQL.
 
 ### CSV Migration Not Working
-- Ensure `students.csv` and `attendance_log.csv` are in project root
-- Run: `python app.py` (migration happens automatically)
+- Ensure `students.csv` is in project root.
+- Run: `python app.py`. Legacy data is parsed and inserted into the SQL tables automatically on startup.
 
 ### Google Sheets Not Syncing
-- Check `credentials.json` exists and is valid
-- Verify spreadsheet ID in `gsheet_helper.py`
+- Check `credentials.json` exists and is valid.
+- Verify spreadsheet ID in `gsheet_helper.py`.
 
 ## Future Enhancements
 
@@ -250,9 +280,9 @@ For issues, questions, or suggestions:
 ### v1.0.0 (April 4, 2026)
 - ✅ Initial release
 - ✅ CSV to SQLite migration
-- ✅ Real-time statistics
-- ✅ QR code scanning
-- ✅ Management panel with tabs
+- ✅ Real-time statistics & Chart.js integration
+- ✅ QR code scanning via device camera
+- ✅ Multi-role dashboards (Admin, Teacher, Student)
 - ✅ Render.com deployment ready
 
 ---

@@ -1,22 +1,29 @@
+# Environment
+.env
 __pycache__/
 *.pyc
-*.pyo
-*.pyd
-*.db
-*.sqlite3
-*.log
-
-# Environment files
-.env
 venv/
-*.env
+.venv/
 
-# Credentials (DO NOT push API keys!)
-# Credentials
-credentials.json
-
-# Temporary or generated files
+# Generated files
+*.csv
 *.xlsx
-attendance.csv
+qr_codes.pdf
+absentees_*.xlsx
 attendance_log.csv
-qr_codes.pdf  # if generated dynamically
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Uploads (keep directory, ignore contents)
+static/uploads/profiles/*
+!static/uploads/profiles/default_student.png
+!static/uploads/profiles/default_teacher.png
+
+# Google credentials
+credentials.json
