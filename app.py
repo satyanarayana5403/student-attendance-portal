@@ -47,6 +47,11 @@ if DB_URL:
         DB_URL = DB_URL.replace('postgresql://', 'postgresql+psycopg2://', 1)
     elif DB_URL.startswith('mysql://') and 'pymysql' not in DB_URL:
         DB_URL = DB_URL.replace('mysql://', 'mysql+pymysql://', 1)
+    
+    # Strip query parameters (like ?ssl-mode=...) from MySQL URLs 
+    # as they cause "unexpected keyword argument" errors in pymysql
+    if 'mysql' in DB_URL and '?' in DB_URL:
+        DB_URL = DB_URL.split('?')[0]
 else:
     # Strict fallback to MySQL if no URL provided
     DB_URL = 'mysql+pymysql://root:root@localhost:3306/attendance_db'
