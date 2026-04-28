@@ -124,17 +124,26 @@ student-attendance-portal/
 ├── requirements.txt        # Python dependencies
 ├── Procfile               # Render deployment config
 ├── runtime.txt            # Python version specification
+├── DEPLOY.md              # Deployment guide
+├── .env.example           # Environment variables template
+├── reset_db.py            # Utility script to reset database
 │
+├── static/                # Static assets (CSS, JS, profile uploads)
 ├── templates/             # HTML templates
 │   ├── base.html          # Master layout
 │   ├── login.html         # Authentication interface
+│   ├── index.html         # Main attendance marking UI
+│   ├── dashboard.html     # Attendance history overview
 │   ├── student_dashboard.html # Student attendance view
 │   ├── teacher_dashboard.html # Teacher QR scanning interface
-│   └── management.html    # Admin management panel
+│   ├── management.html    # Admin management panel
+│   ├── report.html        # Absentee reporting UI
+│   └── absentees.html     # Full absentee list view
 │
 ├── email_helper.py        # SMTP Email notification service
 ├── gsheet_helper.py       # Google Sheets sync integration
 ├── absent_notifier.py     # Absentee calculation logic
+├── cron_task.py           # Automated background scheduled tasks
 │
 ├── students.csv           # Legacy student data (auto-migrated)
 ├── attendance_log.csv     # Legacy attendance history
