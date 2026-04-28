@@ -45,12 +45,12 @@ graph TD
     classDef database fill:#D69E2E,stroke:#B7791F,stroke-width:2px,color:#fff
     classDef external fill:#805AD5,stroke:#6B46C1,stroke-width:2px,color:#fff
     
-    Client(Teacher / Student Device) ::: client
-    UI(Frontend Dashboards & jsQR Scanner) ::: frontend
-    API(Flask Backend Core & Routing) ::: backend
-    DB[(SQLite / MySQL Database)] ::: database
-    ExtSMTP(SMTP Mail Server) ::: external
-    ExtSheet(Google Sheets API) ::: external
+    Client["Teacher / Student Device"]:::client
+    UI["Frontend Dashboards & jsQR Scanner"]:::frontend
+    API["Flask Backend Core & Routing"]:::backend
+    DB[("SQLite / MySQL Database")]:::database
+    ExtSMTP["SMTP Mail Server"]:::external
+    ExtSheet["Google Sheets API"]:::external
     
     Client -->|Scans QR / Clicks| UI
     UI -->|AJAX POST / Fetch JSON| API
