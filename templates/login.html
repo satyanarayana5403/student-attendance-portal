@@ -138,9 +138,11 @@ font-family: var(--mono);
 
     {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
-    {% for category, message in messages %}
-    <div class="flash flash-{{ category }}">{{ message }}<button class="flash-close">&times;</button></div>
-    {% endfor %}
+    <div class="flash-container">
+        {% for category, message in messages %}
+        <div class="flash flash-{{ category }}">{{ message }}<button class="flash-close">&times;</button></div>
+        {% endfor %}
+    </div>
     {% endif %}
     {% endwith %}
 

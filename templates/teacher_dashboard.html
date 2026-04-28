@@ -112,9 +112,11 @@
     <div class="main-content">
         {% with messages = get_flashed_messages(with_categories=true) %}
           {% if messages %}
+            <div class="flash-container">
             {% for category, message in messages %}
               <div class="flash flash-{{ category }}">{{ message }}<button class="flash-close">&times;</button></div>
             {% endfor %}
+            </div>
           {% endif %}
         {% endwith %}
 
@@ -413,6 +415,25 @@
                 body: JSON.stringify({ uid: uid.trim() })
             });
             const data = await res.json();
+            
+            // Show toast
+            let flashContainer = document.querySelector('.flash-container');
+            if (!flashContainer) {
+                flashContainer = document.createElement('div');
+                flashContainer.className = 'flash-container';
+                document.body.appendChild(flashContainer);
+            }
+            const flash = document.createElement('div');
+            flash.className = `flash flash-${data.success ? 'success' : 'danger'}`;
+            flash.innerHTML = `${data.message || (data.success ? 'Marked — ' + uid : 'Failed')}<button class="flash-close" onclick="this.parentElement.classList.add('flash-dismissing');setTimeout(()=>this.parentElement.remove(), 400)">&times;</button>`;
+            flashContainer.appendChild(flash);
+            setTimeout(() => {
+                if (document.body.contains(flash)) {
+                    flash.classList.add('flash-dismissing');
+                    setTimeout(() => flash.remove(), 400);
+                }
+            }, 4000);
+
             if (data.success) {
                 tSetStatus('ok', data.message || 'Marked — ' + uid);
                 tAddLog(uid, method, true);

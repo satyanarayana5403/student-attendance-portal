@@ -27,3 +27,7 @@ static/uploads/profiles/*
 
 # Google credentials
 credentials.json
+
+# Database
+*.db
+instance/

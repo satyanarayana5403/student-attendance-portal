@@ -130,8 +130,8 @@
             to { opacity: 1; }
         }
         @keyframes slideInRight {
-            from { opacity: 0; transform: translateX(12px); }
-            to { opacity: 1; transform: translateX(0); }
+            0% { opacity: 0; transform: translate3d(120%, 0, 0); }
+            100% { opacity: 1; transform: translate3d(0, 0, 0); }
         }
         @keyframes blink {
             0%, 100% { opacity: 1; }
@@ -445,14 +445,28 @@
         .progress-fill.warn { background: linear-gradient(90deg, var(--amber), #fbbf24); }
         .progress-fill.bad { background: linear-gradient(90deg, var(--red), #f87171); }
 
-        /* Flash messages */
-        .flash-container { margin-bottom: 20px; }
+        /* Flash messages (Floating Toasts) */
+        .flash-container {
+            position: fixed;
+            top: 24px;
+            right: 24px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            pointer-events: none;
+        }
         .flash {
+            pointer-events: auto;
+            min-width: 320px;
+            max-width: 400px;
             padding: 14px 18px; border-radius: var(--radius-sm);
             font-size: 13px; display: flex; align-items: center; gap: 8px;
-            margin-bottom: 8px;
-            animation: slideInRight 0.3s ease both;
+            animation: slideInRight 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
             position: relative;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
         }
         .flash .flash-close {
             margin-left: auto; background: none; border: none;
@@ -463,10 +477,12 @@
         }
         .flash .flash-close:hover { opacity: 1; }
         .flash.flash-dismissing {
-            animation: flashDismiss 0.3s ease forwards;
+            animation: flashDismiss 0.5s cubic-bezier(0.55, 0.085, 0.68, 0.53) forwards;
         }
         @keyframes flashDismiss {
-            to { opacity: 0; transform: translateX(20px); height: 0; padding: 0; margin: 0; overflow: hidden; }
+            0% { opacity: 1; transform: translate3d(0, 0, 0); }
+            20% { transform: translate3d(-15px, 0, 0); opacity: 1; }
+            100% { opacity: 0; transform: translate3d(120%, 0, 0); height: 0; padding-top: 0; padding-bottom: 0; margin-bottom: 0; border-width: 0; overflow: hidden; }
         }
         .flash-success { background: var(--green-glow); color: var(--green); border: 1px solid rgba(16,185,129,0.15); }
         .flash-danger { background: var(--red-glow); color: var(--red); border: 1px solid rgba(239,68,68,0.15); }
@@ -600,13 +616,23 @@
 
         {% block extra_js %}{% endblock %}
 
-        // Flash message close buttons
-        document.querySelectorAll('.flash .flash-close').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const flash = btn.closest('.flash');
-                flash.classList.add('flash-dismissing');
-                setTimeout(() => flash.remove(), 300);
-            });
+        // Flash message close buttons & auto-dismiss
+        document.querySelectorAll('.flash').forEach(flash => {
+            // Auto-dismiss after 4 seconds
+            setTimeout(() => {
+                if (document.body.contains(flash)) {
+                    flash.classList.add('flash-dismissing');
+                    setTimeout(() => flash.remove(), 300);
+                }
+            }, 4000);
+            
+            const btn = flash.querySelector('.flash-close');
+            if (btn) {
+                btn.addEventListener('click', () => {
+                    flash.classList.add('flash-dismissing');
+                    setTimeout(() => flash.remove(), 300);
+                });
+            }
         });
 
         // Global theme toggle function

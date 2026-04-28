@@ -38,30 +38,19 @@ app.config['UPLOAD_FOLDER'] = 'static/uploads/profiles'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB limit
 app.config['WTF_CSRF_TIME_LIMIT'] = None  # CSRF tokens don't expire (better UX)
 
-# Database configuration — reads from .env, defaults to SQLite
-DB_URL = os.getenv('DATABASE_URL', 'sqlite:///attendance.db')
-if DB_URL.startswith('postgresql://'):
-    DB_URL = DB_URL.replace('postgresql://', 'postgresql+psycopg2://', 1)
+# Database configuration — strictly reads from .env
+DB_URL = os.getenv('DATABASE_URL')
 
-# Test MySQL connectivity — fall back to SQLite if unreachable
-if 'mysql' in DB_URL:
-    try:
-        import pymysql
-        from urllib.parse import urlparse, unquote
-        parsed = urlparse(DB_URL.replace('mysql+pymysql://', 'http://'))
-        host = parsed.hostname or 'localhost'
-        port = parsed.port or 3306
-        user = parsed.username or 'root'
-        password = unquote(parsed.password or '')
-        db_name = (parsed.path or '').lstrip('/')
-        pymysql.connect(
-            host=host, port=port, user=user, password=password,
-            database=db_name or None, connect_timeout=5
-        ).close()
-        print(f"[OK] MySQL connection verified ({user}@{host}:{port}/{db_name})")
-    except Exception as e:
-        print(f"[WARN] MySQL unreachable ({e}), falling back to SQLite")
-        DB_URL = 'sqlite:///attendance.db'
+# Support both MySQL and PostgreSQL (for Render/Heroku)
+if DB_URL:
+    if DB_URL.startswith('postgresql://'):
+        DB_URL = DB_URL.replace('postgresql://', 'postgresql+psycopg2://', 1)
+    elif DB_URL.startswith('mysql://'):
+        DB_URL = DB_URL.replace('mysql://', 'mysql+pymysql://', 1)
+else:
+    # Strict fallback to MySQL if no URL provided
+    DB_URL = 'mysql+pymysql://root:root@localhost:3306/attendance_db'
+    print("[WARN] No DATABASE_URL found in .env, defaulting to local MySQL")
 
 app.config['SQLALCHEMY_DATABASE_URI'] = DB_URL
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
