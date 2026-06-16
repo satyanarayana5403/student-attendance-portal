@@ -68,6 +68,23 @@ def create_app(config_class=Config):
     def init_db():
         try:
             db.create_all()
+            
+            # Dynamically add username column if missing in existing DB
+            from sqlalchemy import inspect, text
+            inspector = inspect(db.engine)
+            if 'students' in inspector.get_table_names():
+                columns = [col['name'] for col in inspector.get_columns('students')]
+                if 'username' not in columns:
+                    db.session.execute(text("ALTER TABLE students ADD COLUMN username VARCHAR(100) DEFAULT '' NOT NULL"))
+                    db.session.execute(text("UPDATE students s JOIN users u ON s.user_id = u.id SET s.username = u.username"))
+            
+            if 'teachers' in inspector.get_table_names():
+                columns = [col['name'] for col in inspector.get_columns('teachers')]
+                if 'username' not in columns:
+                    db.session.execute(text("ALTER TABLE teachers ADD COLUMN username VARCHAR(100) DEFAULT '' NOT NULL"))
+                    db.session.execute(text("UPDATE teachers t JOIN users u ON t.user_id = u.id SET t.username = u.username"))
+            db.session.commit()
+
             if not User.query.filter_by(username='admin').first():
                 admin = User(username='admin', role='admin')
                 admin.set_password('admin123')
