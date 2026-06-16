@@ -363,7 +363,7 @@ body::before {
   <!-- SIDEBAR -->
   <aside class="sidebar">
     <div class="sidebar-header">
-      <a class="brand" href="{{ url_for('index') }}">
+      <a class="brand" href="{{ url_for('main.index') }}">
         <div class="brand-icon">⬡</div>
         <div>
           <div class="brand-name">Nexus</div>
@@ -374,7 +374,7 @@ body::before {
 
     <nav class="sidebar-nav">
       <div class="nav-section-label">Main</div>
-      <a class="nav-item" href="{{ url_for('index') }}">
+      <a class="nav-item" href="{{ url_for('main.index') }}">
         <span class="ni">◈</span> Mark Attendance
       </a>
       <a class="nav-item" href="/dashboard">
@@ -473,10 +473,10 @@ body::before {
 
       <!-- ACTION ROW -->
       <div class="action-row">
-        <a href="{{ url_for('index') }}" class="btn-secondary">← Back</a>
+        <a href="{{ url_for('main.index') }}" class="btn-secondary">← Back</a>
 
         {% if absentees %}
-        <a href="{{ url_for('send_absent_emails') }}" class="btn-primary red">
+        <a href="{{ url_for('admin.send_absent_notifications') }}" class="btn-primary red" onclick="this.style.pointerEvents='none'; this.innerHTML='<div class=\'loader-spinner\' style=\'width:16px;height:16px;border-width:2px;display:inline-block;vertical-align:middle;margin-right:6px;\'></div> Sending...';">
           ✉ Send Absent Emails
         </a>
         <a href="{{ url_for('export_absentees') }}" class="btn-primary green">

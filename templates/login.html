@@ -43,7 +43,7 @@ border-radius: 10px;
 h1 { font-size: 22px; margin-bottom: 6px; font-weight: 600; }
 .subtitle { color: var(--text-2); font-size: 14px; margin-bottom: 28px; }
 
-.form-group { margin-bottom: 18px; }
+.form-group { margin-bottom: 18px; position: relative; }
 .form-group label {
 display: block; font-size: 12px; margin-bottom: 6px;
 color: var(--text-2); font-family: var(--mono);
@@ -51,7 +51,7 @@ text-transform: uppercase; letter-spacing: 0.06em;
 }
 .form-group input[type="text"],
 .form-group input[type="password"] {
-width: 100%; padding: 13px 16px;
+width: 100%; padding: 13px 16px; padding-right: 48px;
 background: var(--surface-2);
 border: 1px solid var(--border);
 border-radius: 10px;
@@ -146,7 +146,7 @@ font-family: var(--mono);
     {% endif %}
     {% endwith %}
 
-    <form method="POST">
+    <form method="POST" action="/login" autocomplete="on">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="form-group">
             <label>Username</label>
@@ -157,6 +157,9 @@ font-family: var(--mono);
             <label>Password</label>
             <input type="password" name="password" required autocomplete="current-password"
                 placeholder="Enter your password" id="login-password">
+            <button type="button" id="toggle-password" style="position: absolute; right: 14px; top: 38px; background: none; border: none; color: var(--text-2); cursor: pointer; padding: 0; display: flex; align-items: center; justify-content: center; outline: none;" aria-label="Toggle password visibility">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-eye"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+            </button>
         </div>
         <label class="remember-row" id="remember-label">
             <input type="checkbox" name="remember" value="1" class="remember-input" id="remember-checkbox">
@@ -172,13 +175,30 @@ font-family: var(--mono);
 
 {% block extra_js %}
 // Remember me toggle
-const rememberCheck = document.getElementById('remember-check');
 const rememberInput = document.getElementById('remember-checkbox');
-if (rememberCheck) {
-rememberCheck.addEventListener('click', () => {
-rememberInput.checked = !rememberInput.checked;
-rememberCheck.classList.toggle('checked', rememberInput.checked);
-});
+const rememberCheck = document.getElementById('remember-check');
+if (rememberInput && rememberCheck) {
+    rememberInput.addEventListener('change', () => {
+        rememberCheck.classList.toggle('checked', rememberInput.checked);
+    });
+}
+
+// Password visibility toggle
+const togglePassword = document.getElementById('toggle-password');
+const passwordInput = document.getElementById('login-password');
+if (togglePassword && passwordInput) {
+    togglePassword.addEventListener('click', () => {
+        const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+        passwordInput.setAttribute('type', type);
+        
+        if (type === 'text') {
+            togglePassword.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-eye-off"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>';
+            togglePassword.style.color = 'var(--accent)';
+        } else {
+            togglePassword.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-eye"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>';
+            togglePassword.style.color = 'var(--text-2)';
+        }
+    });
 }
 
 // Particle animation

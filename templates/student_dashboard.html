@@ -133,7 +133,7 @@
             <img src="{{ url_for('static', filename='uploads/profiles/' + prof.profile_pic) }}" class="profile-pic" alt="Profile">
             <div class="profile-name">{{ prof.name }}</div>
             <div class="profile-id">{{ prof.uid }}</div>
-            <form action="{{ url_for('upload_profile') }}" method="POST" enctype="multipart/form-data">
+            <form action="{{ url_for('main.upload_profile') }}" method="POST" enctype="multipart/form-data">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="file" name="file" style="display:none" id="profileInput" accept="image/*" onchange="this.form.submit()">
                 <label for="profileInput" class="profile-upload">Update Photo</label>
@@ -265,7 +265,7 @@
         <div class="modal">
             <button class="modal-close" onclick="document.getElementById('pwModal').classList.remove('show')">×</button>
             <div class="modal-title">Change Password</div>
-            <form action="{{ url_for('change_password') }}" method="POST">
+            <form action="{{ url_for('auth.change_password') }}" method="POST">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="form-group">
                     <label>Current Password</label>

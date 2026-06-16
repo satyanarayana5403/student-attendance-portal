@@ -32,5 +32,5 @@ https://student-attendance-portal.onrender.com
 
 ## Notes
 - Free tier has 15-minute idle timeout = cold starts (5-10s)
-- SQLite database works fine for small deployments
+- MySQL/PostgreSQL works fine for small deployments
 - For upgrades/issues, check Render logs in dashboard

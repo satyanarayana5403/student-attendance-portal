@@ -1,6 +1,6 @@
 # Nexus Attendance Portal
 
-A modern, efficient student attendance management system built with Flask and SQLite.
+A modern, efficient student attendance management system built with Flask and an SQL database.
 
 ![Version](https://img.shields.io/badge/version-1.0.0-blue)
 ![Python](https://img.shields.io/badge/python-3.10+-brightgreen)
@@ -18,7 +18,7 @@ A modern, efficient student attendance management system built with Flask and SQ
 - **Google Sheets Integration** - Auto-sync attendance directly to Google Sheets
 
 ### 💾 Backend
-- **Database agnostic** - Supports SQLite (default) and MySQL/PostgreSQL
+- **Database agnostic** - Supports MySQL and PostgreSQL
 - **SQLAlchemy ORM** - Type-safe, secure database operations
 - **Auto-migration** - Legacy CSV data automatically migrates to the database on first run
 - **RBAC Authentication** - Secure password hashing and role-based access control
@@ -48,7 +48,7 @@ graph TD
     Client["Teacher / Student Device"]:::client
     UI["Frontend Dashboards & jsQR Scanner"]:::frontend
     API["Flask Backend Core & Routing"]:::backend
-    DB[("SQLite / MySQL Database")]:::database
+    DB[("MySQL Database")]:::database
     ExtSMTP["SMTP Mail Server"]:::external
     ExtSheet["Google Sheets API"]:::external
     
@@ -64,7 +64,7 @@ graph TD
 | Component | Technology |
 |-----------|-----------|
 | Backend | Python 3, Flask |
-| Database | SQLite / MySQL + SQLAlchemy |
+| Database | MySQL + SQLAlchemy |
 | Frontend | HTML5, CSS3, JavaScript (Vanilla), Jinja2 |
 | Visualization | Chart.js |
 | Hardware API | jsQR (Camera processing) |
@@ -147,9 +147,7 @@ student-attendance-portal/
 │
 ├── students.csv           # Legacy student data (auto-migrated)
 ├── attendance_log.csv     # Legacy attendance history
-├── attendance.db          # SQLite database (auto-created on run)
-│
-└── credentials.json       # Google API credentials
+├── credentials.json       # Google API credentials
 ```
 
 ## Database Schema (Core Tables)
@@ -207,7 +205,7 @@ CREATE TABLE attendance (
 ```bash
 FLASK_ENV=production          # production or development
 SECRET_KEY=your-secret-key    # Random secret key
-DATABASE_URL=sqlite:///attendance.db  # DB connection string
+DATABASE_URL=mysql+pymysql://root:password@localhost/db  # DB connection string
 GMAIL_USER=your_email@gmail.com # Sender email
 GMAIL_PASS=your_app_password  # Sender app password
 ```
@@ -243,9 +241,8 @@ GMAIL_PASS=your_app_password  # Sender app password
 pip install -r requirements.txt
 ```
 
-### Database Lock Issues
-- SQLite shouldn't have issues with small user counts.
-- For production use with multiple simultaneous QR scans, change `DATABASE_URL` to PostgreSQL.
+### Database Connection Issues
+- Ensure your SQL database is properly configured for simultaneous connections.
 
 ### CSV Migration Not Working
 - Ensure `students.csv` is in project root.
@@ -288,7 +285,7 @@ For issues, questions, or suggestions:
 
 ### v1.0.0 (April 4, 2026)
 - ✅ Initial release
-- ✅ CSV to SQLite migration
+- ✅ CSV to SQL migration
 - ✅ Real-time statistics & Chart.js integration
 - ✅ QR code scanning via device camera
 - ✅ Multi-role dashboards (Admin, Teacher, Student)

@@ -348,7 +348,7 @@ body::before {
   <!-- SIDEBAR -->
   <aside class="sidebar">
     <div class="sidebar-header">
-      <a class="brand" href="{{ url_for('index') }}">
+      <a class="brand" href="{{ url_for('main.index') }}">
         <div class="brand-icon">⬡</div>
         <div>
           <div class="brand-name">Nexus</div>
@@ -359,7 +359,7 @@ body::before {
 
     <nav class="sidebar-nav">
       <div class="nav-section-label">Main</div>
-      <a class="nav-item" href="{{ url_for('index') }}">
+      <a class="nav-item" href="{{ url_for('main.index') }}">
         <span class="ni">◈</span> Mark Attendance
       </a>
       <a class="nav-item active" href="#">
@@ -411,7 +411,7 @@ body::before {
     <div class="content">
 
       <div class="toolbar">
-        <a href="{{ url_for('index') }}" class="btn-back">← Back</a>
+        <a href="{{ url_for('main.index') }}" class="btn-back">← Back</a>
         <div class="toolbar-count" id="total-count">
           <!-- filled by JS -->
         </div>

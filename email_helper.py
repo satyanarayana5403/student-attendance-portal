@@ -13,7 +13,7 @@ GMAIL_PASS = os.getenv('GMAIL_PASS', '')
 def send_email(to_email, subject, body):
     """Send email with timeout protection"""
     if not GMAIL_USER or not GMAIL_PASS:
-        print(f"⚠️  Email credentials not configured in .env. Simulating email to {to_email}")
+        print(f"WARNING: Email credentials not configured in .env. Simulating email to {to_email}")
         return True
 
     msg = MIMEMultipart()
@@ -29,11 +29,11 @@ def send_email(to_email, subject, body):
             server.starttls()
             server.login(GMAIL_USER, GMAIL_PASS)
             server.send_message(msg)
-        print(f"✅ Email sent to: {to_email}")
+        print(f"SUCCESS: Email sent to: {to_email}")
         return True
     except socket.timeout:
-        print(f"⚠️  Email timeout for {to_email} (network slow)")
+        print(f"WARNING: Email timeout for {to_email} (network slow)")
         return False
     except Exception as e:
-        print(f"❌ Error sending email to {to_email}: {str(e)[:100]}")
+        print(f"ERROR: Error sending email to {to_email}: {str(e)[:100]}")
         return False
