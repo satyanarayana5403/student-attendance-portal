@@ -4,10 +4,16 @@ from dotenv import load_dotenv
 load_dotenv()
 
 class Config:
-    SECRET_KEY = os.getenv('SECRET_KEY', 'nexus-fallback-key-change-me')
+    SECRET_KEY = os.getenv('SECRET_KEY', 'nexus-attendance-secure-key-2026-xyz!')
     UPLOAD_FOLDER = 'static/uploads/profiles'
-    MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB limit
-    WTF_CSRF_TIME_LIMIT = None  # CSRF tokens don't expire
+    MAX_CONTENT_LENGTH = 8 * 1024 * 1024  # 8MB limit
+    WTF_CSRF_TIME_LIMIT = 7200  # 2 hours CSRF token life
+    
+    # Cookie security against XSS & CSRF
+    SESSION_COOKIE_HTTPONLY = True
+    SESSION_COOKIE_SAMESITE = 'Lax'
+    REMEMBER_COOKIE_HTTPONLY = True
+    REMEMBER_COOKIE_SAMESITE = 'Lax'
 
     DB_URL = os.getenv('DATABASE_URL')
     if DB_URL:
@@ -21,7 +27,7 @@ class Config:
         if 'mysql' in DB_URL and '?' in DB_URL:
             DB_URL = DB_URL.split('?')[0]
     else:
-        DB_URL = 'mysql+pymysql://root:root@localhost:3306/attendance_db'
+        DB_URL = 'mysql+pymysql://root:Venky%40321@localhost:3306/attendance_db'
 
     SQLALCHEMY_DATABASE_URI = DB_URL
     SQLALCHEMY_TRACK_MODIFICATIONS = False

@@ -1,254 +1,535 @@
-{% extends "base.html" %}
-
-{% block title %}Login — Nexus Attendance{% endblock %}
-{% block loader_text %}Initializing...{% endblock %}
-
-{% block extra_css %}
-body {
-display: flex;
-align-items: center;
-justify-content: center;
-position: relative;
-}
-
-/* Particle canvas */
-#particles {
-position: fixed;
-inset: 0;
-z-index: 0;
-}
-
-.login-card {
-background: var(--surface);
-padding: 48px 40px;
-border-radius: 24px;
-border: 1px solid var(--border);
-width: 100%;
-max-width: 420px;
-box-shadow: 0 25px 60px rgba(0,0,0,0.5);
-position: relative;
-z-index: 1;
-animation: fadeUp 0.5s ease both;
-backdrop-filter: blur(20px);
--webkit-backdrop-filter: blur(20px);
-}
-
-.brand { margin-bottom: 32px; }
-.brand-icon {
-width: 36px; height: 36px;
-font-size: 16px;
-border-radius: 10px;
-}
-.brand-name { font-size: 18px; font-weight: 700; }
-h1 { font-size: 22px; margin-bottom: 6px; font-weight: 600; }
-.subtitle { color: var(--text-2); font-size: 14px; margin-bottom: 28px; }
-
-.form-group { margin-bottom: 18px; position: relative; }
-.form-group label {
-display: block; font-size: 12px; margin-bottom: 6px;
-color: var(--text-2); font-family: var(--mono);
-text-transform: uppercase; letter-spacing: 0.06em;
-}
-.form-group input[type="text"],
-.form-group input[type="password"] {
-width: 100%; padding: 13px 16px; padding-right: 48px;
-background: var(--surface-2);
-border: 1px solid var(--border);
-border-radius: 10px;
-color: var(--text);
-font-size: 14px; font-family: var(--sans);
-transition: border-color 0.2s, box-shadow 0.2s;
-outline: none;
-}
-.form-group input:focus {
-border-color: var(--accent);
-box-shadow: 0 0 0 3px var(--accent-glow);
-}
-
-.remember-row {
-display: flex; align-items: center; gap: 8px;
-margin-bottom: 18px; cursor: pointer;
-}
-.remember-check {
-width: 18px; height: 18px;
-border: 1px solid var(--border);
-border-radius: 4px;
-background: var(--surface-2);
-display: flex; align-items: center; justify-content: center;
-transition: all var(--transition);
-flex-shrink: 0;
-}
-.remember-check.checked {
-background: var(--accent);
-border-color: var(--accent);
-}
-.remember-check.checked::after {
-content: '✓';
-color: white;
-font-size: 11px;
-font-weight: 700;
-}
-.remember-text {
-font-size: 13px; color: var(--text-2);
-}
-.remember-input { display: none; }
-
-.btn-login {
-width: 100%;
-padding: 14px;
-background: linear-gradient(135deg, var(--accent), var(--accent-2));
-border: none;
-border-radius: 10px;
-color: white;
-font-weight: 600;
-font-size: 14px;
-cursor: pointer;
-margin-top: 8px;
-transition: transform 0.15s, box-shadow 0.15s;
-}
-.btn-login:hover {
-transform: translateY(-1px);
-box-shadow: 0 8px 25px rgba(99,102,241,0.4);
-}
-.btn-login:active { transform: translateY(0); }
-
-.version-tag {
-text-align: center;
-margin-top: 24px;
-font-size: 11px;
-color: var(--text-3);
-font-family: var(--mono);
-}
-{% endblock %}
-
-{% block body %}
-<canvas id="particles"></canvas>
-
-<div class="login-card">
-    <div class="brand">
-        <div class="brand-icon">⬡</div>
-        <div>
-            <div class="brand-name">Nexus</div>
-            <div class="brand-sub">Attendance</div>
-        </div>
-    </div>
-
-    <h1>Welcome Back</h1>
-    <p class="subtitle">Sign in to access the Attendance Portal</p>
-
-    {% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}
-    <div class="flash-container">
-        {% for category, message in messages %}
-        <div class="flash flash-{{ category }}">{{ message }}<button class="flash-close">&times;</button></div>
-        {% endfor %}
-    </div>
-    {% endif %}
-    {% endwith %}
-
-    <form method="POST" action="/login" autocomplete="on">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <div class="form-group">
-            <label>Username</label>
-            <input type="text" name="username" required autocomplete="username" placeholder="Enter your username"
-                id="login-username">
-        </div>
-        <div class="form-group">
-            <label>Password</label>
-            <input type="password" name="password" required autocomplete="current-password"
-                placeholder="Enter your password" id="login-password">
-            <button type="button" id="toggle-password" style="position: absolute; right: 14px; top: 38px; background: none; border: none; color: var(--text-2); cursor: pointer; padding: 0; display: flex; align-items: center; justify-content: center; outline: none;" aria-label="Toggle password visibility">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-eye"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-            </button>
-        </div>
-        <label class="remember-row" id="remember-label">
-            <input type="checkbox" name="remember" value="1" class="remember-input" id="remember-checkbox">
-            <div class="remember-check" id="remember-check"></div>
-            <span class="remember-text">Remember me</span>
-        </label>
-        <button type="submit" class="btn-login" id="login-submit">Sign In</button>
-    </form>
-
-    <div class="version-tag">v3.0.0 — Nexus Attendance System</div>
-</div>
-{% endblock %}
-
-{% block extra_js %}
-// Remember me toggle
-const rememberInput = document.getElementById('remember-checkbox');
-const rememberCheck = document.getElementById('remember-check');
-if (rememberInput && rememberCheck) {
-    rememberInput.addEventListener('change', () => {
-        rememberCheck.classList.toggle('checked', rememberInput.checked);
-    });
-}
-
-// Password visibility toggle
-const togglePassword = document.getElementById('toggle-password');
-const passwordInput = document.getElementById('login-password');
-if (togglePassword && passwordInput) {
-    togglePassword.addEventListener('click', () => {
-        const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
-        passwordInput.setAttribute('type', type);
-        
-        if (type === 'text') {
-            togglePassword.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-eye-off"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>';
-            togglePassword.style.color = 'var(--accent)';
-        } else {
-            togglePassword.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-eye"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>';
-            togglePassword.style.color = 'var(--text-2)';
-        }
-    });
-}
-
-// Particle animation
-const canvas = document.getElementById('particles');
-if (canvas) {
-const ctx = canvas.getContext('2d');
-let particles = [];
-const PARTICLE_COUNT = 60;
-
-function resizeCanvas() {
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
-}
-resizeCanvas();
-window.addEventListener('resize', resizeCanvas);
-
-class Particle {
-constructor() { this.reset(); }
-reset() {
-this.x = Math.random() * canvas.width;
-this.y = Math.random() * canvas.height;
-this.vx = (Math.random() - 0.5) * 0.4;
-this.vy = (Math.random() - 0.5) * 0.4;
-this.radius = Math.random() * 1.5 + 0.5;
-this.opacity = Math.random() * 0.3 + 0.1;
-}
-update() {
-this.x += this.vx;
-this.y += this.vy;
-if (this.x < 0 || this.x> canvas.width) this.vx *= -1;
-    if (this.y < 0 || this.y> canvas.height) this.vy *= -1;
-        }
-        draw() {
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(99, 102, 241, ${this.opacity})`;
-        ctx.fill();
-        }
-        }
-
-        for (let i = 0; i < PARTICLE_COUNT; i++) { particles.push(new Particle()); } function drawConnections() { for
-            (let i=0; i < particles.length; i++) { for (let j=i + 1; j < particles.length; j++) { const
-            dx=particles[i].x - particles[j].x; const dy=particles[i].y - particles[j].y; const dist=Math.sqrt(dx * dx +
-            dy * dy); if (dist < 120) { ctx.beginPath(); ctx.moveTo(particles[i].x, particles[i].y);
-            ctx.lineTo(particles[j].x, particles[j].y); ctx.strokeStyle=`rgba(99, 102, 241, ${0.06 * (1 - dist /
-            120)})`; ctx.lineWidth=0.5; ctx.stroke(); } } } } function animate() { ctx.clearRect(0, 0, canvas.width,
-            canvas.height); particles.forEach(p=> { p.update(); p.draw(); });
-            drawConnections();
-            requestAnimationFrame(animate);
-            }
-            animate();
-            }
-            {% endblock %}
+{% extends "base.html" %}
+
+{% block title %}Login — Nexus Attendance{% endblock %}
+{% block loader_text %}Initializing...{% endblock %}
+
+{% block extra_css %}
+body {
+display: flex;
+align-items: center;
+justify-content: center;
+position: relative;
+}
+
+/* Particle canvas */
+#particles {
+position: fixed;
+inset: 0;
+z-index: 0;
+}
+
+.login-card {
+background: var(--surface);
+padding: 48px 40px;
+border-radius: 24px;
+border: 1px solid var(--border);
+width: 100%;
+max-width: 420px;
+box-shadow: 0 25px 60px rgba(0,0,0,0.5);
+position: relative;
+z-index: 1;
+animation: fadeUp 0.5s ease both;
+backdrop-filter: blur(20px);
+-webkit-backdrop-filter: blur(20px);
+}
+
+.brand { margin-bottom: 32px; }
+.brand-icon {
+width: 36px; height: 36px;
+font-size: 16px;
+border-radius: 10px;
+}
+.brand-name { font-size: 18px; font-weight: 700; }
+h1 { font-size: 22px; margin-bottom: 6px; font-weight: 600; }
+.subtitle { color: var(--text-2); font-size: 14px; margin-bottom: 28px; }
+
+.form-group { margin-bottom: 18px; position: relative; }
+.form-group label {
+display: block; font-size: 12px; margin-bottom: 6px;
+color: var(--text-2); font-family: var(--mono);
+text-transform: uppercase; letter-spacing: 0.06em;
+}
+.form-group input[type="text"],
+.form-group input[type="password"] {
+width: 100%; padding: 13px 16px; padding-right: 48px;
+background: var(--surface-2);
+border: 1px solid var(--border);
+border-radius: 10px;
+color: var(--text);
+font-size: 14px; font-family: var(--sans);
+transition: border-color 0.2s, box-shadow 0.2s;
+outline: none;
+}
+/* Password Suggestion Box — Modern Glass Design */
+.password-suggestion-box {
+    display: none;
+    align-items: center;
+    gap: 12px;
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.06) 0%, rgba(139, 92, 246, 0.04) 100%);
+    border: 1px solid rgba(99, 102, 241, 0.15);
+    border-radius: 12px;
+    padding: 12px 14px;
+    margin-top: 10px;
+    margin-bottom: 14px;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    animation: pwSuggestSlide 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+.password-suggestion-box::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent 0%, rgba(99,102,241,0.06) 50%, transparent 100%);
+    animation: pwShimmer 2.5s ease-in-out infinite;
+    pointer-events: none;
+}
+@keyframes pwSuggestSlide {
+    from { opacity: 0; transform: translateY(-8px) scale(0.97); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes pwShimmer {
+    0%, 100% { transform: translateX(-100%); }
+    50%      { transform: translateX(100%); }
+}
+.suggestion-icon-wrap {
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, rgba(99,102,241,0.2), rgba(139,92,246,0.15));
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    box-shadow: 0 0 12px rgba(99,102,241,0.15);
+}
+.suggestion-icon-wrap svg {
+    width: 16px; height: 16px;
+    color: var(--accent);
+    stroke: var(--accent);
+    fill: none;
+}
+.suggestion-body {
+    flex: 1; min-width: 0;
+}
+.suggestion-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-3);
+    font-family: var(--mono);
+    margin-bottom: 2px;
+}
+.suggestion-value {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.suggestion-code {
+    font-family: var(--mono);
+    font-size: 14px;
+    font-weight: 600;
+    color: #fff;
+    letter-spacing: 0.04em;
+    background: linear-gradient(135deg, rgba(99,102,241,0.25), rgba(139,92,246,0.18));
+    padding: 3px 10px;
+    border-radius: 6px;
+    border: 1px solid rgba(99,102,241,0.2);
+}
+.btn-suggestion-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--text-2);
+    padding: 5px 12px;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 600;
+    font-family: var(--mono);
+    cursor: pointer;
+    transition: all 0.25s ease;
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+.btn-suggestion-action:hover {
+    background: rgba(99, 102, 241, 0.12);
+    border-color: rgba(99, 102, 241, 0.35);
+    color: var(--accent);
+    transform: translateY(-1px);
+}
+.btn-suggestion-action.applied {
+    background: linear-gradient(135deg, rgba(16,185,129,0.12), rgba(52,211,153,0.08));
+    border-color: rgba(16, 185, 129, 0.3);
+    color: #34d399;
+    cursor: default;
+    box-shadow: 0 0 10px rgba(16,185,129,0.08);
+}
+.btn-suggestion-action.applied:hover {
+    transform: none;
+    background: linear-gradient(135deg, rgba(16,185,129,0.12), rgba(52,211,153,0.08));
+}
+.btn-suggestion-action .btn-check-icon {
+    display: inline-block;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: rgba(16,185,129,0.2);
+    line-height: 14px;
+    text-align: center;
+    font-size: 9px;
+}
+
+.form-group input:focus {
+border-color: var(--accent);
+box-shadow: 0 0 0 3px var(--accent-glow);
+}
+
+.remember-row {
+display: flex; align-items: center; gap: 8px;
+margin-bottom: 18px; cursor: pointer;
+}
+.remember-check {
+width: 18px; height: 18px;
+border: 1px solid var(--border);
+border-radius: 4px;
+background: var(--surface-2);
+display: flex; align-items: center; justify-content: center;
+transition: all var(--transition);
+flex-shrink: 0;
+}
+.remember-check.checked {
+background: var(--accent);
+border-color: var(--accent);
+}
+.remember-check.checked::after {
+content: '✓';
+color: white;
+font-size: 11px;
+font-weight: 700;
+}
+.remember-text {
+font-size: 13px; color: var(--text-2);
+}
+.remember-input { display: none; }
+
+.btn-login {
+width: 100%;
+padding: 14px;
+background: linear-gradient(135deg, var(--accent), var(--accent-2));
+border: none;
+border-radius: 10px;
+color: white;
+font-weight: 600;
+font-size: 14px;
+cursor: pointer;
+margin-top: 8px;
+transition: transform 0.15s, box-shadow 0.15s;
+}
+.btn-login:hover {
+transform: translateY(-1px);
+box-shadow: 0 8px 25px rgba(99,102,241,0.4);
+}
+.btn-login:active { transform: translateY(0); }
+
+.version-tag {
+text-align: center;
+margin-top: 24px;
+font-size: 11px;
+color: var(--text-3);
+font-family: var(--mono);
+}
+{% endblock %}
+
+{% block body %}
+<canvas id="particles"></canvas>
+
+<div class="login-card">
+    <div class="brand">
+        <div class="brand-icon">⬡</div>
+        <div>
+            <div class="brand-name">Nexus</div>
+            <div class="brand-sub">Attendance</div>
+        </div>
+    </div>
+
+    <h1>Welcome Back</h1>
+    <p class="subtitle">Sign in to access the Attendance Portal</p>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <div class="flash-container">
+        {% for category, message in messages %}
+        <div class="flash flash-{{ category }}">{{ message }}<button class="flash-close">&times;</button></div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    {% endwith %}
+
+    <form method="POST" action="/login" autocomplete="on" id="login-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="form-group">
+            <label>Username</label>
+            <input type="text" name="username" required autocomplete="username" placeholder="Enter your username"
+                id="login-username">
+        </div>
+        <div class="form-group" style="margin-bottom: 6px;">
+            <label>Password</label>
+            <input type="password" name="password" required autocomplete="current-password"
+                placeholder="Enter your password" id="login-password">
+            <button type="button" id="toggle-password" style="position: absolute; right: 14px; top: 38px; background: none; border: none; color: var(--text-2); cursor: pointer; padding: 0; display: flex; align-items: center; justify-content: center; outline: none;" aria-label="Toggle password visibility">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-eye"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+            </button>
+        </div>
+
+        <!-- Dynamic Password Suggestion Banner -->
+        <div id="password-suggestion" class="password-suggestion-box">
+            <div class="suggestion-icon-wrap">
+                <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            </div>
+            <div class="suggestion-body">
+                <div class="suggestion-label">Suggested password</div>
+                <div class="suggestion-value">
+                    <code class="suggestion-code" id="suggested-code">admin123</code>
+                </div>
+            </div>
+            <button type="button" class="btn-suggestion-action" id="btn-apply-suggestion">
+                <span class="btn-check-icon">✓</span> Auto-Filled
+            </button>
+        </div>
+
+        <label class="remember-row" id="remember-label">
+            <input type="checkbox" name="remember" value="1" class="remember-input" id="remember-checkbox">
+            <div class="remember-check" id="remember-check"></div>
+            <span class="remember-text">Remember me</span>
+        </label>
+        <button type="submit" class="btn-login" id="login-submit">Sign In</button>
+    </form>
+
+    <div class="version-tag">v3.0.0 — Nexus Attendance System</div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+// Remember me toggle
+const rememberInput = document.getElementById('remember-checkbox');
+const rememberCheck = document.getElementById('remember-check');
+if (rememberInput && rememberCheck) {
+    rememberInput.addEventListener('change', () => {
+        rememberCheck.classList.toggle('checked', rememberInput.checked);
+    });
+}
+
+// Password visibility toggle
+const togglePassword = document.getElementById('toggle-password');
+const passwordInput = document.getElementById('login-password');
+if (togglePassword && passwordInput) {
+    togglePassword.addEventListener('click', () => {
+        const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+        passwordInput.setAttribute('type', type);
+        
+        if (type === 'text') {
+            togglePassword.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-eye-off"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>';
+            togglePassword.style.color = 'var(--accent)';
+        } else {
+            togglePassword.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-eye"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>';
+            togglePassword.style.color = 'var(--text-2)';
+        }
+    });
+}
+
+// Particle animation
+const canvas = document.getElementById('particles');
+if (canvas) {
+const ctx = canvas.getContext('2d');
+let particles = [];
+const PARTICLE_COUNT = 60;
+
+function resizeCanvas() {
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+}
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+
+class Particle {
+constructor() { this.reset(); }
+reset() {
+this.x = Math.random() * canvas.width;
+this.y = Math.random() * canvas.height;
+this.vx = (Math.random() - 0.5) * 0.4;
+this.vy = (Math.random() - 0.5) * 0.4;
+this.radius = Math.random() * 1.5 + 0.5;
+this.opacity = Math.random() * 0.3 + 0.1;
+}
+update() {
+this.x += this.vx;
+this.y += this.vy;
+if (this.x < 0 || this.x> canvas.width) this.vx *= -1;
+    if (this.y < 0 || this.y> canvas.height) this.vy *= -1;
+        }
+        draw() {
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(99, 102, 241, ${this.opacity})`;
+        ctx.fill();
+        }
+        }
+
+        for (let i = 0; i < PARTICLE_COUNT; i++) { particles.push(new Particle()); } function drawConnections() { for
+            (let i=0; i < particles.length; i++) { for (let j=i + 1; j < particles.length; j++) { const
+            dx=particles[i].x - particles[j].x; const dy=particles[i].y - particles[j].y; const dist=Math.sqrt(dx * dx +
+            dy * dy); if (dist < 120) { ctx.beginPath(); ctx.moveTo(particles[i].x, particles[i].y);
+            ctx.lineTo(particles[j].x, particles[j].y); ctx.strokeStyle=`rgba(99, 102, 241, ${0.06 * (1 - dist /
+            120)})`; ctx.lineWidth=0.5; ctx.stroke(); } } } } function animate() { ctx.clearRect(0, 0, canvas.width,
+            canvas.height); particles.forEach(p=> { p.update(); p.draw(); });
+            drawConnections();
+            requestAnimationFrame(animate);
+            }
+            animate();
+            }
+
+// ==========================================
+// Password Suggestion — Remember Me Only
+// ==========================================
+
+// Clean up any old storage keys
+try { localStorage.removeItem('nexus_user_credentials'); } catch(e) {}
+
+const usernameInput = document.getElementById('login-username');
+const pwField = document.getElementById('login-password');
+const suggestionBox = document.getElementById('password-suggestion');
+const suggestedCode = document.getElementById('suggested-code');
+const btnApply = document.getElementById('btn-apply-suggestion');
+const loginForm = document.getElementById('login-form');
+const rememberCB = document.getElementById('remember-checkbox');
+
+let activeSuggestedPassword = '';
+
+// ── Storage helpers ──
+function getRememberedCredentials() {
+    try {
+        return JSON.parse(localStorage.getItem('nexus_remembered_creds') || '{}');
+    } catch(e) {
+        return {};
+    }
+}
+
+function saveRememberedCredential(username, password) {
+    if (!username || !password) return;
+    try {
+        const creds = getRememberedCredentials();
+        creds[username.toLowerCase().trim()] = password;
+        localStorage.setItem('nexus_remembered_creds', JSON.stringify(creds));
+    } catch(e) {}
+}
+
+function removeRememberedCredential(username) {
+    if (!username) return;
+    try {
+        const creds = getRememberedCredentials();
+        delete creds[username.toLowerCase().trim()];
+        localStorage.setItem('nexus_remembered_creds', JSON.stringify(creds));
+    } catch(e) {}
+}
+
+// ── Suggestion logic ──
+function checkAndSuggest() {
+    const rawVal = usernameInput ? usernameInput.value.trim() : '';
+    const u = rawVal.toLowerCase();
+
+    // Must be at least 4 characters (e.g. 'admin' is 5, student uid is 10)
+    // Partial usernames like '23A' must NOT trigger suggestions
+    if (!u || u.length < 4) {
+        hideSuggestion();
+        return;
+    }
+
+    // Only suggest if the user previously logged in with "Remember me" checked
+    const remembered = getRememberedCredentials();
+    if (Object.prototype.hasOwnProperty.call(remembered, u)) {
+        displaySuggestion(remembered[u]);
+    } else {
+        hideSuggestion();
+    }
+}
+
+function hideSuggestion() {
+    if (suggestionBox) suggestionBox.style.display = 'none';
+    activeSuggestedPassword = '';
+}
+
+function displaySuggestion(suggested) {
+    activeSuggestedPassword = suggested;
+    if (!suggestionBox || !suggestedCode) return;
+
+    suggestedCode.textContent = suggested;
+    suggestionBox.style.display = 'flex';
+
+    // Auto-fill password into field
+    if (pwField) {
+        pwField.value = suggested;
+    }
+    updateSuggestionButtonState(true);
+
+    // Auto-tick Remember me checkbox for remembered user
+    if (rememberCB && !rememberCB.checked) {
+        rememberCB.checked = true;
+        if (typeof rememberCheck !== 'undefined' && rememberCheck) {
+            rememberCheck.classList.add('checked');
+        }
+    }
+}
+
+function updateSuggestionButtonState(isApplied) {
+    if (!btnApply) return;
+    if (isApplied) {
+        btnApply.innerHTML = '<span class="btn-check-icon">✓</span> Auto-Filled';
+        btnApply.classList.add('applied');
+    } else {
+        btnApply.innerHTML = 'Use Suggested';
+        btnApply.classList.remove('applied');
+    }
+}
+
+// ── Event listeners ──
+if (usernameInput) {
+    // Hide suggestion while actively typing to avoid premature popups
+    usernameInput.addEventListener('input', function() {
+        hideSuggestion();
+    });
+    // Only check when the user finishes entering the username (leaves the field)
+    usernameInput.addEventListener('blur', checkAndSuggest);
+    usernameInput.addEventListener('change', checkAndSuggest);
+}
+
+if (pwField) {
+    pwField.addEventListener('input', function() {
+        if (activeSuggestedPassword) {
+            const isMatch = (pwField.value === activeSuggestedPassword);
+            updateSuggestionButtonState(isMatch);
+        }
+    });
+}
+
+if (btnApply) {
+    btnApply.addEventListener('click', function() {
+        if (activeSuggestedPassword && pwField) {
+            pwField.value = activeSuggestedPassword;
+            updateSuggestionButtonState(true);
+            pwField.focus();
+        }
+    });
+}
+
+// Save credentials ONLY when Remember me is checked on login submit
+if (loginForm) {
+    loginForm.addEventListener('submit', function() {
+        const u = usernameInput ? usernameInput.value : '';
+        const p = pwField ? pwField.value : '';
+        if (u && p && rememberCB && rememberCB.checked) {
+            saveRememberedCredential(u, p);
+        } else if (u && rememberCB && !rememberCB.checked) {
+            removeRememberedCredential(u);
+        }
+    });
+}
+{% endblock %}

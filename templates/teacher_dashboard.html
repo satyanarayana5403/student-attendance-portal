@@ -92,12 +92,18 @@
 {% block body %}
     <aside class="sidebar-teacher">
         <div class="profile-section">
-            <img src="{{ url_for('static', filename='uploads/profiles/' + prof.profile_pic) }}" class="profile-pic" alt="Profile">
+            <label for="profileInput" class="profile-pic-wrapper" title="Click to change profile photo">
+                <img src="{{ url_for('static', filename='uploads/profiles/' + prof.profile_pic) }}" class="profile-pic" alt="Profile">
+                <div class="profile-pic-badge">
+                    <span>📷</span>
+                    Change
+                </div>
+            </label>
             <div class="profile-name">{{ prof.name }}</div>
             <div class="profile-dept">{{ prof.department or 'Faculty' }}</div>
             <form action="{{ url_for('main.upload_profile') }}" method="POST" enctype="multipart/form-data">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <input type="file" name="file" style="display:none" id="profileInput" accept="image/*" onchange="this.form.submit()">
+                <input type="file" name="file" style="display:none" id="profileInput" accept="image/*" onchange="openImageAdjusterForInput(this, this.form)">
                 <label for="profileInput" class="profile-upload">Change Photo</label>
             </form>
         </div>

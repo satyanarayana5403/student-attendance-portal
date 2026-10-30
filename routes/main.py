@@ -5,6 +5,7 @@ from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
 from flask import current_app
 from extensions import db
+from utils import save_secure_image
 
 main_bp = Blueprint('main', __name__)
 
@@ -28,24 +29,19 @@ def upload_profile():
         return redirect(request.referrer or url_for('main.index'))
 
     file = request.files['file']
-    if file.filename == '':
+    if not file or file.filename == '':
         flash("No file selected.", "danger")
         return redirect(request.referrer or url_for('main.index'))
 
-    # Validate file type
-    allowed = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
-    ext = file.filename.rsplit('.', 1)[-1].lower() if '.' in file.filename else ''
-    if ext not in allowed:
-        flash("Only image files (PNG, JPG, GIF, WebP) are allowed.", "danger")
+    saved_pic = save_secure_image(file, current_user.id, current_app.config['UPLOAD_FOLDER'])
+    if not saved_pic:
+        flash("Invalid image file. Only genuine PNG, JPG, and WebP images up to 8MB are allowed.", "danger")
         return redirect(request.referrer or url_for('main.index'))
 
-    filename = secure_filename(f"{current_user.id}_{int(datetime.now().timestamp())}.{ext}")
-    file.save(os.path.join(current_app.config['UPLOAD_FOLDER'], filename))
-
     if current_user.role == 'student' and current_user.student_profile:
-        current_user.student_profile.profile_pic = filename
+        current_user.student_profile.profile_pic = saved_pic
     elif current_user.role == 'teacher' and current_user.teacher_profile:
-        current_user.teacher_profile.profile_pic = filename
+        current_user.teacher_profile.profile_pic = saved_pic
     db.session.commit()
     flash("✓ Profile photo updated!", "success")
     return redirect(request.referrer or url_for('main.index'))

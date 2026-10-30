@@ -84,3 +84,19 @@ class SupportTicket(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
     
     user = db.relationship('User', backref='tickets')
+
+
+class AttendanceAnomaly(db.Model):
+    __tablename__ = 'attendance_anomalies'
+    id = db.Column(db.Integer, primary_key=True)
+    student_id = db.Column(db.Integer, db.ForeignKey('students.id'), nullable=True)
+    uid = db.Column(db.String(100), nullable=False, index=True)
+    name = db.Column(db.String(255), default='')
+    anomaly_type = db.Column(db.String(50), nullable=False)  # 'EXPIRED_QR', 'RAPID_REPEAT', 'OUTSIDE_GEOFENCE', 'TAMPERED_QR', 'IP_MISMATCH'
+    severity = db.Column(db.String(20), default='warning')    # 'danger', 'warning', 'info'
+    details = db.Column(db.Text, default='')
+    ip_address = db.Column(db.String(100), default='')
+    created_at = db.Column(db.DateTime, default=datetime.now)
+    resolved = db.Column(db.Boolean, default=False)
+
+    student = db.relationship('Student', backref=db.backref('anomalies', lazy=True, cascade='all, delete-orphan'))
