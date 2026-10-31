@@ -572,3 +572,49 @@ def api_save_geofence():
 
     return jsonify({'success': True, 'message': 'Geo-fencing settings saved successfully!'})
 
+@api_bp.route('/scheduler/status', methods=['GET'])
+@admin_required
+def api_scheduler_status():
+    settings = get_settings()
+    return jsonify({
+        'enabled': settings.get('auto_absent_alerts_enabled') == 'true',
+        'alert_time': settings.get('auto_absent_alert_time', '17:00'),
+        'last_run': settings.get('last_auto_alert_run', 'Never'),
+        'last_stats': settings.get('last_auto_alert_stats', 'No alerts sent yet')
+    })
+
+@api_bp.route('/scheduler/save', methods=['POST'])
+@admin_required
+@csrf.exempt
+def api_scheduler_save():
+    from flask import current_app
+    from scheduler import reschedule_daily_job
+    data = request.get_json() or {}
+    enabled = str(data.get('enabled', 'true')).lower()
+    time_str = str(data.get('alert_time', '17:00')).strip()
+
+    try:
+        datetime.strptime(time_str, '%H:%M')
+    except ValueError:
+        time_str = '17:00'
+
+    for k, v in [('auto_absent_alerts_enabled', enabled), ('auto_absent_alert_time', time_str)]:
+        s = AppSetting.query.filter_by(key=k).first()
+        if not s:
+            db.session.add(AppSetting(key=k, value=v))
+        else:
+            s.value = v
+    db.session.commit()
+
+    reschedule_daily_job(current_app._get_current_object(), time_str)
+    return jsonify({'success': True, 'message': f'Automated alert scheduled for {time_str} daily!'})
+
+@api_bp.route('/scheduler/run_now', methods=['POST'])
+@admin_required
+@csrf.exempt
+def api_scheduler_run_now():
+    from flask import current_app
+    from scheduler import run_daily_absentee_job
+    result = run_daily_absentee_job(current_app._get_current_object(), force=True)
+    return jsonify(result)
+

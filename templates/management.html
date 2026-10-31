@@ -8610,6 +8610,87 @@ pointer-events: none;
                     <div style="font-size: 11px; color: var(--text-3); font-family: var(--mono);">
                         Accuracy: ±6 decimal places (approx. 10cm ground precision)
                     </div>
+            <!-- Automated Daily Absentee Alerts Scheduler Card -->
+            <div class="card" style="margin-top: 24px;">
+                <div class="card-header" style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px;">
+                    <div>
+                        <div class="card-title" style="display: flex; align-items: center; gap: 8px;">
+                            <span>⏰ Automated Scheduled Absentee Alerts</span>
+                            <span class="badge {{ 'badge-green' if settings.get('auto_absent_alerts_enabled') == 'true' else 'badge-amber' }}" id="autoAlertStatusBadge">
+                                {{ 'Active (' + settings.get('auto_absent_alert_time', '17:00') + ' Daily)' if settings.get('auto_absent_alerts_enabled') == 'true' else 'Disabled' }}
+                            </span>
+                        </div>
+                        <div style="font-size: 13px; color: var(--text-3); margin-top: 4px;">
+                            Automatically scans attendance daily and emails parents/guardians of absent students at the scheduled evening hour.
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                        <button type="button" class="btn btn-outline" onclick="triggerTestAlertNow()" id="btnTestAlert" style="padding: 7px 14px; font-size: 12px; display: inline-flex; align-items: center; gap: 6px;">
+                            ⚡ Run Alert Test Now
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Toggle Row -->
+                <div class="setting-item" style="border-bottom: 1px solid var(--border); padding-bottom: 16px; margin-bottom: 18px;">
+                    <div>
+                        <div class="setting-label">Automated Evening Dispatch</div>
+                        <div class="setting-desc">Enable background daemon to automatically notify absentees daily without manual admin action</div>
+                    </div>
+                    <div class="toggle {{ 'on' if settings.get('auto_absent_alerts_enabled') == 'true' }}" id="autoAlertToggle" onclick="toggleAutoAlert(this)"></div>
+                </div>
+
+                <!-- Schedule Settings Row -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 18px;">
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label style="font-size: 11px; text-transform: uppercase; font-family: var(--mono); color: var(--text-2); display: flex; justify-content: space-between;">
+                            <span>Daily Trigger Time</span>
+                            <span style="color: var(--accent); font-weight: normal;">Default: 17:00 (5:00 PM)</span>
+                        </label>
+                        <input type="time" id="alertTimeInput" value="{{ settings.get('auto_absent_alert_time', '17:00') }}" style="font-family: var(--mono); font-size: 14px;">
+                    </div>
+                    
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label style="font-size: 11px; text-transform: uppercase; font-family: var(--mono); color: var(--text-2);">Last Automated Run</label>
+                        <div style="padding: 10px 14px; background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 8px; font-family: var(--mono); font-size: 13px; color: var(--text-1);" id="schedulerLastRunText">
+                            {{ settings.get('last_auto_alert_run', 'Never') }}
+                        </div>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label style="font-size: 11px; text-transform: uppercase; font-family: var(--mono); color: var(--text-2);">Recent Run Telemetry</label>
+                        <div style="padding: 10px 14px; background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 8px; font-family: var(--mono); font-size: 12px; color: var(--text-2);" id="schedulerLastStatsText">
+                            {{ settings.get('last_auto_alert_stats', 'No alerts sent yet') }}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Template Preview Box -->
+                <div style="background: rgba(99,102,241,0.04); border: 1px solid rgba(99,102,241,0.18); border-radius: 10px; padding: 14px 16px; margin-bottom: 18px;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                        <span style="font-size: 12px; font-weight: 600; color: var(--accent);">✉️ Email Format Preview</span>
+                        <span style="font-size: 11px; color: var(--text-3); font-family: var(--mono);">Rich HTML + Plain Text Fallback</span>
+                    </div>
+                    <div style="font-size: 12px; color: var(--text-2); line-height: 1.5;">
+                        Subject: <code style="color: var(--accent); background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 4px;">⚠️ Daily Absence Notice — [Student Name] ([Today's Date])</code><br>
+                        Includes: Student UID, exact session date, unexcused absence badge, and college office instructions.
+                    </div>
+                </div>
+
+                <!-- Save Action Row -->
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <button type="button" class="btn btn-primary" onclick="saveSchedulerSettings()" style="padding: 9px 20px; font-size: 13px; display: inline-flex; align-items: center; gap: 6px; font-weight: 600;">
+                            💾 Save Schedule Settings
+                        </button>
+                        <span id="schedulerSaveFeedback" style="font-size: 12px; font-family: var(--mono);"></span>
+                    </div>
+                    <div style="font-size: 11px; color: var(--text-3); font-family: var(--mono);">
+                        Powered by Nexus Scheduler Daemon (Auto-retries on network delay)
+                    </div>
+                </div>
+            </div>
+
                 </div>
             </div>
 
@@ -23092,6 +23173,115 @@ pointer-events: none;
             setTimeout(initOrResizeCampusMap, 300);
         }
     });
+
+
+    // ==========================================
+    // AUTOMATED DAILY ABSENTEE SCHEDULER LOGIC
+    // ==========================================
+    function toggleAutoAlert(toggleEl) {
+        toggleEl.classList.toggle('on');
+        const isEnabled = toggleEl.classList.contains('on');
+        const timeVal = document.getElementById('alertTimeInput').value || '17:00';
+        const badge = document.getElementById('autoAlertStatusBadge');
+        if (badge) {
+            badge.className = isEnabled ? 'badge badge-green' : 'badge badge-amber';
+            badge.textContent = isEnabled ? `Active (${timeVal} Daily)` : 'Disabled';
+        }
+    }
+
+    async function saveSchedulerSettings() {
+        const toggleEl = document.getElementById('autoAlertToggle');
+        const isEnabled = toggleEl ? toggleEl.classList.contains('on') : true;
+        const timeVal = (document.getElementById('alertTimeInput').value || '17:00').trim();
+        const feedback = document.getElementById('schedulerSaveFeedback');
+
+        if (feedback) {
+            feedback.style.color = 'var(--accent)';
+            feedback.textContent = 'Saving schedule...';
+        }
+
+        try {
+            const resp = await fetch('/api/scheduler/save', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    enabled: isEnabled,
+                    alert_time: timeVal
+                })
+            });
+            const data = await resp.json();
+            if (data.success) {
+                if (feedback) {
+                    feedback.style.color = 'var(--green)';
+                    feedback.textContent = `✓ Scheduled for ${timeVal} daily!`;
+                    setTimeout(() => { feedback.textContent = ''; }, 4000);
+                }
+                const badge = document.getElementById('autoAlertStatusBadge');
+                if (badge) {
+                    badge.className = isEnabled ? 'badge badge-green' : 'badge badge-amber';
+                    badge.textContent = isEnabled ? `Active (${timeVal} Daily)` : 'Disabled';
+                }
+            } else {
+                if (feedback) {
+                    feedback.style.color = 'var(--red)';
+                    feedback.textContent = `❌ ${data.message || 'Save failed'}`;
+                }
+            }
+        } catch (e) {
+            if (feedback) {
+                feedback.style.color = 'var(--red)';
+                feedback.textContent = '❌ Network error';
+            }
+        }
+    }
+
+    async function triggerTestAlertNow() {
+        const btn = document.getElementById('btnTestAlert');
+        const feedback = document.getElementById('schedulerSaveFeedback');
+
+        if (!confirm('Run the absentee alert job right now for testing? This will scan today\'s absentees and send notifications.')) {
+            return;
+        }
+
+        if (btn) {
+            btn.disabled = true;
+            btn.textContent = '⏳ Sending Alerts...';
+        }
+
+        try {
+            const resp = await fetch('/api/scheduler/run_now', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            });
+            const data = await resp.json();
+            if (data.success) {
+                const statsEl = document.getElementById('schedulerLastStatsText');
+                const lastRunEl = document.getElementById('schedulerLastRunText');
+                if (statsEl && data.stats) statsEl.textContent = data.stats;
+                if (lastRunEl && data.timestamp) lastRunEl.textContent = data.timestamp;
+                if (feedback) {
+                    feedback.style.color = 'var(--green)';
+                    feedback.textContent = `✓ Completed: ${data.sent} sent, ${data.failed} failed, ${data.skipped} skipped`;
+                    setTimeout(() => { feedback.textContent = ''; }, 6000);
+                }
+            } else {
+                if (feedback) {
+                    feedback.style.color = 'var(--amber)';
+                    feedback.textContent = `ℹ️ ${data.message || 'Run completed with notes'}`;
+                }
+            }
+        } catch (e) {
+            if (feedback) {
+                feedback.style.color = 'var(--red)';
+                feedback.textContent = '❌ Error triggering test alert';
+            }
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = '⚡ Run Alert Test Now';
+            }
+        }
+    }
 
 {% endblock %}
 

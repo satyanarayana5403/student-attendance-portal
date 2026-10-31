@@ -303,6 +303,13 @@ def create_app(config_class=Config):
             response.headers['Pragma'] = 'no-cache'
         return response
 
+    # Start automated daily absentee alerts scheduler daemon
+    try:
+        from scheduler import start_scheduler
+        start_scheduler(app)
+    except Exception as e:
+        print(f"[WARN] Could not initialize scheduler: {e}")
+
     return app
 
 

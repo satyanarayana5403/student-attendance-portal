@@ -40,6 +40,10 @@ def get_settings():
     settings.setdefault('campus_lat', '16.5062')
     settings.setdefault('campus_lng', '80.6480')
     settings.setdefault('campus_radius', '250')
+    settings.setdefault('auto_absent_alerts_enabled', 'true')
+    settings.setdefault('auto_absent_alert_time', '17:00')
+    settings.setdefault('last_auto_alert_run', 'Never')
+    settings.setdefault('last_auto_alert_stats', 'No alerts sent yet')
     return settings
 
 def is_safe_redirect_url(target):

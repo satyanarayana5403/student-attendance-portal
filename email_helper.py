@@ -10,17 +10,19 @@ load_dotenv()
 GMAIL_USER = os.getenv('GMAIL_USER', '')
 GMAIL_PASS = os.getenv('GMAIL_PASS', '')
 
-def send_email(to_email, subject, body):
-    """Send email with timeout protection"""
+def send_email(to_email, subject, body, html_body=None):
+    """Send email with timeout protection and optional HTML support"""
     if not GMAIL_USER or not GMAIL_PASS:
-        print(f"WARNING: Email credentials not configured in .env. Simulating email to {to_email}")
+        print(f"INFO: [Email Simulated] To: {to_email} | Subject: {subject}")
         return True
 
-    msg = MIMEMultipart()
+    msg = MIMEMultipart('alternative')
     msg['From'] = GMAIL_USER
     msg['To'] = to_email
     msg['Subject'] = subject
-    msg.attach(MIMEText(body, 'plain'))
+    msg.attach(MIMEText(body, 'plain', 'utf-8'))
+    if html_body:
+        msg.attach(MIMEText(html_body, 'html', 'utf-8'))
 
     try:
         # Set socket timeout to 5 seconds to prevent hanging
